@@ -6,10 +6,17 @@ import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { getUsers } from './GraphService';
+import {
+  getChannelsOfTeam,
+  getJoinedTeams,
+  getUsers,
+} from './GraphService';
 import { getUserDetails } from './GraphService';
 import { UserAgentApplication } from 'msal';
 import config from './Config';
+
+// yarn add react-json-tree
+import JSONTree from 'react-json-tree'
 
 // Icons
 import { forwardRef } from 'react';
@@ -83,11 +90,12 @@ class App extends Component {
         { title: 'mobilePhone', field: 'mobilePhone' }
       ],
 
+      channels: [],
+      teams: [],
       user: {},
       users: [],
-      dbusers: [],
-      graphusers: [],
     };
+
     if (config.isDebug) { console.log('this.state'); console.log(this.state); }
 
     if (user) {
@@ -99,13 +107,17 @@ class App extends Component {
       this.login();
     }
 
-    this.ReadUsers = this.ReadUsers.bind(this);
+    this.ReadJoinGraphUsers = this.ReadJoinGraphUsers.bind(this);
+    this.signout = this.signout.bind(this);
     this.Notify = this.Notify.bind(this);
     this.OnClickUpdate = this.OnClickUpdate.bind(this);
     this.OnClickRemove = this.OnClickRemove.bind(this);
 
-    // this.ReadUsers();
-    this.JoinGraphUsers();
+    this.ReadJoinGraphUsers();
+  }
+
+  signout = () => {
+    this.userAgentApplication.logout();
   }
 
   Notify = (type, message) => {
@@ -135,77 +147,59 @@ class App extends Component {
     }
   }
 
-  ReadUsers() {
-    if (config.isDebug) { console.log('ReadUsers()'); }
-
-  //   axios
-  //     .get(FUNCTIONS_BASEURI + FUNCTIONS_KEY)
-  //     .then((results) => {
-  //       const status = results.status;
-  //       if (config.isDebug) { console.log('status'); console.log(status); }
-  //       if (status.toString() === "200") {
-  //         const data = results.data;
-  //         if (config.isDebug) { console.log('data'); console.log(data); }
-  //         this.setState({ dbusers: data });
-  //         this.Notify("info", "[FUNCTIONS]読込みが完了しました。");
-  //       }
-  //     },
-  //     )
-  //     .catch((e) => {
-  //     });
-  }
-
-  async JoinGraphUsers() {
-    if (config.isDebug) { console.log('JoinGraphUsers()'); }
+  async ReadJoinGraphUsers() {
+    if (config.isDebug) { console.log('ReadJoinGraphUsers()'); }
 
     try {
-      console.log('JoinGraphUsers')
+      console.log('ReadJoinGraphUsers')
       // Get the user's accessr token
       var accessToken = await window.msal.acquireTokenSilent({
         scopes: config.scopes
       });
-      console.log(accessToken)
+      if (config.isDebug) {
+        console.log('accessToken');
+        console.log(accessToken);
+      }
       // Get users
       var gotusers = await getUsers(accessToken);
-      console.log('gotusers'); console.log(gotusers);
+      if (config.isDebug) {
+        console.log('gotusers');
+        console.log(gotusers);
+      }
       // Update the array of users in state
-      this.setState({ graphusers: gotusers.value });
+      this.setState({
+        users: gotusers.value
+      });
 
       this.Notify("success", "[Graph API]読込みが完了しました。");
-      console.log('gotusers.value');
-      console.log(gotusers.value);
+      if (config.isDebug) {
+        console.log('gotusers.value');
+        console.log(gotusers.value);
+      }
 
-      this.setState({ users: this.state.graphusers });
+      var gotTeams = await getJoinedTeams(accessToken);
+      if (config.isDebug) {
+        console.log('gotTeams.value');
+        console.log(gotTeams.value);
+      }
+      this.setState({
+        teams: gotTeams.value
+      });
 
-      // join
-      // var DbUsers = this.state.dbusers;
-      // var GraphUsers = this.state.graphusers;
-      // console.log('DbUsers');
-      // console.log(DbUsers);
-      // console.log('GraphUsers');
-      // console.log(GraphUsers);
-      //
-      // if ((typeof DbUsers !== 'undefined') && (typeof GraphUsers !== 'undefined')) {
-      //   if ((DbUsers.length > 0) && (GraphUsers.length > 0)) {
-      //     console.log('DbUsers');
-      //     console.log(DbUsers);
-      //     console.log('GraphUsers');
-      //     console.log(GraphUsers);
-      //     var Joined = DbUsers.map(dbusr =>
-      //       GraphUsers.some(gusr => gusr.id === dbusr.aadid) ?
-      //         GraphUsers.filter(gusr => gusr.id === dbusr.aadid).map(gusr => Object.assign(gusr, dbusr)) :
-      //         { dbusr }
-      //     ).reduce((a, b) => a.concat(b), []);
-      //     console.log('Joined');
-      //     console.log(Joined);
-      //
-      //     this.setState({ users: Joined });
-      //   }
-      // }
-      //
+      const allChannels = [];
+      for (let i = 0, len = (gotTeams.value).length; i < len; ++i) {
+        allChannels.push((await getChannelsOfTeam(accessToken, (gotTeams.value)[i].id)).value);
+      }
+      this.setState({
+        channels: allChannels
+      });
+      if (config.isDebug) {
+        console.log('this.state.channels');
+        console.log(this.state.channels);
+      }
     }
     catch (err) {
-      console.log(String(err));
+      this.Notify("error", "エラーが発生しました: " + err.message + " : " + err.fileName + ":" + err.lineNumber);
     }
   }
 
@@ -226,8 +220,8 @@ class App extends Component {
         }
       },
       )
-      .catch((e) => {
-        this.Notify("error", "[FUNCTIONS]通信に失敗しました。" + e);
+      .catch((err) => {
+            this.Notify("error", "エラーが発生しました: " + err.message + " : " + err.fileName + ":" + err.lineNumber);
       });
   }
 
@@ -243,27 +237,18 @@ class App extends Component {
       await this.getUserProfile();
     }
     catch (err) {
-      if (typeof (err) === 'string') {
-        var errParts = err.split('|');
-        this.setState({
-          isAuthenticated: false,
-          user: {},
-          error: { message: errParts[1], debug: errParts[0] }
-        });
-      } else {
-        this.setState({
-          isAuthenticated: false,
-          user: {},
-          error: err
-        });
-      }
+      this.setState({
+        isAuthenticated: false,
+        user: {}
+      });
+      this.Notify("error", "エラーが発生しました: " + err.message + " : " + err.fileName + ":" + err.lineNumber);
     }
   }
 
-  logout() {
+  async logout() {
     if (config.isDebug) { console.log('logout()'); }
 
-    this.userAgentApplication.logout();
+    await this.userAgentApplication.logout();
   }
 
   async getUserProfile() {
@@ -289,32 +274,16 @@ class App extends Component {
           user: {
             displayName: usr.displayName,
             email: usr.mail || usr.userPrincipalName
-          },
-          error: null
+          }
         });
       }
     }
     catch (err) {
-      console.log('err'); console.log(err);
-
-      var error = {};
-      if (typeof (err) === 'string') {
-        var errParts = err.split('|');
-        error = errParts.length > 1 ?
-          { message: errParts[1], debug: errParts[0] } :
-          { message: err };
-      } else {
-        error = {
-          message: err.message,
-          debug: JSON.stringify(err)
-        };
-      }
-
       this.setState({
         isAuthenticated: false,
-        user: null,
-        error: error
+        user: null
       });
+      this.Notify("error", "エラーが発生しました: " + err.message + " : " + err.fileName + ":" + err.lineNumber);
     }
   }
 
@@ -323,6 +292,33 @@ class App extends Component {
 
     return (
       <div>
+        <div>
+          {
+            (() => {
+              if (this.state.isAuthenticated) {
+                return <button onClick={this.signout}>サインアウト</button>
+              }
+            })()
+          }
+        </div>
+        {
+          (() => {
+            if (this.state.teams) {
+              return <JSONTree data = {this.state.teams}
+              />
+            }
+          })()
+        }
+        {
+          (() => {
+            if (this.state.channels) {
+              return <JSONTree data = {
+                this.state.channels
+              }
+              />
+            }
+          })()
+        }
         <MaterialTable
           icons={tableIcons}
           title="React-GraphApi-MSTeams"
@@ -373,8 +369,8 @@ class App extends Component {
                       }
                     },
                     )
-                    .catch(() => {
-                      this.Notify("error", "[FUNCTIONS]通信に失敗しました。");
+                    .catch((err) => {
+                      this.Notify("error", "エラーが発生しました: " + err.message + " : " + err.fileName + ":" + err.lineNumber);
                     });
                   resolve()
                 }, 1000)
@@ -399,8 +395,8 @@ class App extends Component {
                       }
                     },
                     )
-                    .catch((e) => {
-                      this.Notify("error", "[FUNCTIONS]通信に失敗しました。" + e);
+                    .catch((err) => {
+                          this.Notify("error", "エラーが発生しました: " + err.message + " : " + err.fileName + ":" + err.lineNumber);
                     });
                   resolve()
                 }, 1000)

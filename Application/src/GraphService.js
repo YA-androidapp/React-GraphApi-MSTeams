@@ -25,13 +25,47 @@ export async function getJoinedTeams(accessToken) {
 
   const teams = await client
     .api('/me/joinedTeams')
-    .select('id,displayName,description,internalId,classification,specialization,visibility,webUrl,isArchived,memberSettings,guestSettings,messagingSettings,funSettings,discoverySettings')
-    .orderby('displayName')
-    // .orderby('internalId DESC')
     .get();
-
+  // console.log('teams');
+  // console.log(teams);
   return teams;
 }
+
+
+export async function getMembersOfTeam(accessToken, teamId) {
+  const client = getAuthenticatedClient(accessToken);
+
+  const members = await client
+    .api('/groups/' + teamId + '/members')
+    .get();
+  // console.log('members');
+  // console.log(members);
+  return members;
+}
+
+
+export async function getChannelsOfTeam(accessToken, teamId) {
+  const client = getAuthenticatedClient(accessToken);
+
+  const channels = await client
+    .api('/teams/' + teamId + '/channels')
+    .get();
+  // console.log('channels');
+  // console.log(channels);
+  return channels;
+}
+
+export async function getMessagesOfChannel(accessToken, teamId, channelId) {
+  const client = getAuthenticatedClient(accessToken);
+
+  const messages = await client
+    .api('/teams/' + teamId + '/channels/' + channelId + '/messages')
+    .get();
+  // console.log('messages');
+  // console.log(messages);
+  return messages;
+}
+
 
 export async function getUsers(accessToken) {
   const client = getAuthenticatedClient(accessToken);
@@ -39,8 +73,9 @@ export async function getUsers(accessToken) {
   const users = await client
     .api('/users')
     //.select('businessPhones,displayName,givenName,id,jobTitle,mail,mobilePhone,officeLocation,preferredLanguage,surname,userPrincipalName')
+    // .orderby('internalId DESC')
     .get();
 
-  console.log(users)
+  // console.log(users)
   return users;
 }
