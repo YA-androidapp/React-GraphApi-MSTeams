@@ -1,7 +1,10 @@
 import React, { Component } from "react";
+import ReactDOM from "react-dom";
 import MaterialTable from "material-table";
 // import { DragDropContext } from 'react-beautiful-dnd';
 import axios from "axios";
+
+import Button from "@material-ui/core/Button";
 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -14,7 +17,9 @@ import config from "./Config";
 // yarn add react-json-tree
 import JSONTree from "react-json-tree";
 
-import Button from "@material-ui/core/Button";
+// yarn add react-dropdown-tree-select
+import DropdownTreeSelect from "react-dropdown-tree-select";
+import "react-dropdown-tree-select/dist/styles.css";
 
 // Icons
 import { forwardRef } from "react";
@@ -358,6 +363,18 @@ class App extends Component {
     }
   }
 
+  onTreeChange = (currentNode, selectedNodes) => {
+    console.log("onTreeChange:", currentNode, selectedNodes);
+  };
+
+  onTreeAction = (node, action) => {
+    console.log("onTreeAction:", action, node);
+  };
+
+  onTreeNodeToggle = currentNode => {
+    console.log("onTreeNodeToggle:", currentNode);
+  };
+
   render() {
     if (config.isDebug) {
       console.log("render()");
@@ -383,7 +400,14 @@ class App extends Component {
         })()}
         {(() => {
           if (this.state.channels) {
-            return <JSONTree data={this.state.channels} />;
+            return (
+              <DropdownTreeSelect
+                data={this.state.channels}
+                onChange={onTreeChange}
+                onAction={onTreeAction}
+                onNodeToggle={onTreeNodeToggle}
+              />
+            );
           }
         })()}
         <MaterialTable
