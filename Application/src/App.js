@@ -1,5 +1,4 @@
 import React, { Component } from "react";
-import ReactDOM from "react-dom";
 import MaterialTable from "material-table";
 // import { DragDropContext } from 'react-beautiful-dnd';
 import axios from "axios";
@@ -98,10 +97,23 @@ class App extends Component {
       isAuthenticated: user !== null,
 
       columns: [
-        { title: "ID", field: "id", editable: "never" },
-        { title: "DisplayName", field: "displayName" },
-        { title: "userPrincipalName", field: "userPrincipalName" },
-        { title: "mobilePhone", field: "mobilePhone" }
+        {
+          title: "ID",
+          field: "id",
+          editable: "never"
+        },
+        {
+          title: "DisplayName",
+          field: "displayName"
+        },
+        {
+          title: "userPrincipalName",
+          field: "userPrincipalName"
+        },
+        {
+          title: "mobilePhone",
+          field: "mobilePhone"
+        }
       ],
 
       channels: [],
@@ -129,9 +141,25 @@ class App extends Component {
     this.Notify = this.Notify.bind(this);
     this.OnClickUpdate = this.OnClickUpdate.bind(this);
     this.OnClickRemove = this.OnClickRemove.bind(this);
+    this.onTreeChange = this.onTreeChange.bind(this);
+    this.onTreeAction = this.onTreeAction.bind(this);
+    this.onTreeNodeToggle = this.onTreeNodeToggle.bind(this);
 
+    console.log("this.ReadJoinGraphUsers()");
     this.ReadJoinGraphUsers();
   }
+
+  onTreeChange = (currentNode, selectedNodes) => {
+    console.log("onTreeChange:", currentNode, selectedNodes);
+  };
+
+  onTreeAction = (node, action) => {
+    console.log("onTreeAction:", action, node);
+  };
+
+  onTreeNodeToggle = currentNode => {
+    console.log("onTreeNodeToggle:", currentNode);
+  };
 
   signout = () => {
     this.userAgentApplication.logout();
@@ -155,19 +183,29 @@ class App extends Component {
 
     switch (type) {
       case "info":
-        toast.info(message, { toastId: toastId });
+        toast.info(message, {
+          toastId: toastId
+        });
         break;
       case "success":
-        toast.success(message, { toastId: toastId });
+        toast.success(message, {
+          toastId: toastId
+        });
         break;
       case "warning":
-        toast.warn(message, { toastId: toastId });
+        toast.warn(message, {
+          toastId: toastId
+        });
         break;
       case "error":
-        toast.error(message, { toastId: toastId });
+        toast.error(message, {
+          toastId: toastId
+        });
         break;
       default:
-        toast(message, { toastId: toastId });
+        toast(message, {
+          toastId: toastId
+        });
         break;
     }
   };
@@ -213,14 +251,27 @@ class App extends Component {
         teams: gotTeams.value
       });
 
+      if (config.isDebug) {
+        console.log("allChannels = {}");
+      }
       const allChannels = {}; // [];
       for (let i = 0, len = gotTeams.value.length; i < len; ++i) {
-        var team = gotTeams.value[i];
-        team.channels = (
-          await getChannelsOfTeam(accessToken, gotTeams.value[i].id)
-        ).value;
-        // allChannels.push(team);
-        allChannels[team.id] = team;
+        var team = {}; // gotTeams.value[i];
+        console.log("i: " + String(i) + " team:" + gotTeams.value[i].id);
+        team.label = gotTeams.value[i].displayName;
+        team.value = gotTeams.value[i].id;
+        team.children = [];
+        var cv = (await getChannelsOfTeam(accessToken, gotTeams.value[i].id))
+          .value;
+        for (let j = 0, len = cv.length; j < len; ++j) {
+          team.children.push(cv[j]);
+          //TODO
+        }
+        allChannels[gotTeams.value[i].id] = team;
+      }
+      if (config.isDebug) {
+        console.log("allChannels");
+        console.log(allChannels);
       }
       this.setState({
         channels: allChannels
@@ -363,18 +414,6 @@ class App extends Component {
     }
   }
 
-  onTreeChange = (currentNode, selectedNodes) => {
-    console.log("onTreeChange:", currentNode, selectedNodes);
-  };
-
-  onTreeAction = (node, action) => {
-    console.log("onTreeAction:", action, node);
-  };
-
-  onTreeNodeToggle = currentNode => {
-    console.log("onTreeNodeToggle:", currentNode);
-  };
-
   render() {
     if (config.isDebug) {
       console.log("render()");
@@ -383,33 +422,34 @@ class App extends Component {
     return (
       <div>
         <div>
+          {" "}
           {(() => {
             if (this.state.isAuthenticated) {
               return (
                 <Button variant="contained" onClick={this.signout}>
-                  サインアウト
+                  サインアウト{" "}
                 </Button>
               );
             }
-          })()}
-        </div>
+          })()}{" "}
+        </div>{" "}
         {(() => {
           if (this.state.teams) {
             return <JSONTree data={this.state.teams} />;
           }
-        })()}
+        })()}{" "}
         {(() => {
           if (this.state.channels) {
             return (
               <DropdownTreeSelect
                 data={this.state.channels}
-                onChange={onTreeChange}
-                onAction={onTreeAction}
-                onNodeToggle={onTreeNodeToggle}
+                onChange={this.onTreeChange}
+                onAction={this.onTreeAction}
+                onNodeToggle={this.onTreeNodeToggle}
               />
             );
           }
-        })()}
+        })()}{" "}
         <MaterialTable
           icons={tableIcons}
           title="React-GraphApi-MSTeams"
@@ -439,7 +479,12 @@ class App extends Component {
                           console.log(data);
                         }
                         data.push(newData);
-                        this.setState({ data }, () => resolve());
+                        this.setState(
+                          {
+                            data
+                          },
+                          () => resolve()
+                        );
                       }
                     })
                     .catch(() => {
@@ -479,7 +524,12 @@ class App extends Component {
                           console.log(index);
                         }
                         data[index] = newData;
-                        this.setState({ data }, () => resolve());
+                        this.setState(
+                          {
+                            data
+                          },
+                          () => resolve()
+                        );
                       }
                     })
                     .catch(err => {
@@ -526,7 +576,12 @@ class App extends Component {
                           console.log(index);
                         }
                         data.splice(index, 1);
-                        this.setState({ data }, () => resolve());
+                        this.setState(
+                          {
+                            data
+                          },
+                          () => resolve()
+                        );
                       }
                     })
                     .catch(err => {
@@ -548,7 +603,7 @@ class App extends Component {
             pageSize: 10,
             sorting: true
           }}
-        />
+        />{" "}
         <ToastContainer hideProgressBar />
       </div>
     );
