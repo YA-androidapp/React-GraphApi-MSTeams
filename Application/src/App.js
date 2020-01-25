@@ -12,6 +12,7 @@ import {
   getChannelsOfTeam,
   getJoinedTeams,
   getMessagesOfChannel,
+  getRepliesOfMessage,
   getUsers
 } from "./GraphService";
 import { getUserDetails } from "./GraphService";
@@ -169,6 +170,19 @@ class App extends Component {
     console.log("表示するチャネル:", currentNode.label, currentNode.value);
     var s = currentNode.value.split(" ");
     var gotmessages = await getMessagesOfChannel(accessToken, s[0], s[1]);
+
+    for (let i = 0, len = gotmessages.value.length; i < len; ++i) {
+      console.log("gotmessages i:" + String(i));
+      var r = await getRepliesOfMessage(
+        accessToken,
+        s[0],
+        s[1],
+        gotmessages.value[i].id
+      );
+      console.log("gotmessages r.value:", r.value);
+      gotmessages.value[i].replies = r.value;
+    }
+
     this.setState({
       messages: gotmessages.value
     });
