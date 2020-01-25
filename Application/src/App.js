@@ -151,6 +151,8 @@ class App extends Component {
 
   onTreeChange = (currentNode, selectedNodes) => {
     console.log("onTreeChange:", currentNode, selectedNodes);
+
+    console.log("表示するチャネル:", currentNode.label, currentNode.value);
   };
 
   onTreeAction = (node, action) => {
@@ -236,7 +238,7 @@ class App extends Component {
         users: gotusers.value
       });
 
-      this.Notify("success", "[Graph API]読込みが完了しました。");
+      this.Notify("success", "[Graph API]ユーザー読込みが完了しました。");
       if (config.isDebug) {
         console.log("gotusers.value");
         console.log(gotusers.value);
@@ -251,23 +253,33 @@ class App extends Component {
         teams: gotTeams.value
       });
 
+      this.Notify("success", "[Graph API]チーム読込みが完了しました。");
+
       if (config.isDebug) {
         console.log("allChannels = {}");
       }
-      const allChannels = {}; // [];
+      const allChannels = {
+        label: "Channels",
+        value: "Channels",
+        children: []
+      };
       for (let i = 0, len = gotTeams.value.length; i < len; ++i) {
         var team = {}; // gotTeams.value[i];
         console.log("i: " + String(i) + " team:" + gotTeams.value[i].id);
         team.label = gotTeams.value[i].displayName;
         team.value = gotTeams.value[i].id;
         team.children = [];
-        var cv = (await getChannelsOfTeam(accessToken, gotTeams.value[i].id))
-          .value;
-        for (let j = 0, len = cv.length; j < len; ++j) {
-          team.children.push(cv[j]);
-          //TODO
+        var gotChannels = await getChannelsOfTeam(
+          accessToken,
+          gotTeams.value[i].id
+        );
+        for (let j = 0, len = gotChannels.value.length; j < len; ++j) {
+          var channel = {};
+          channel.label = gotChannels.value[j].displayName;
+          channel.value = gotChannels.value[j].id;
+          team.children.push(channel);
         }
-        allChannels[gotTeams.value[i].id] = team;
+        allChannels.children.push(team);
       }
       if (config.isDebug) {
         console.log("allChannels");
@@ -280,6 +292,8 @@ class App extends Component {
         console.log("this.state.channels");
         console.log(this.state.channels);
       }
+
+      this.Notify("success", "[Graph API]チャネル読込みが完了しました。");
     } catch (err) {
       this.Notify(
         "error",
@@ -426,9 +440,15 @@ class App extends Component {
           {(() => {
             if (this.state.isAuthenticated) {
               return (
-                <Button variant="contained" onClick={this.signout}>
-                  サインアウト{" "}
-                </Button>
+                <div>
+                  <div>
+                    ようこそ、{this.state.user.displayName} (
+                    {this.state.user.email})さん
+                  </div>
+                  <Button variant="contained" onClick={this.signout}>
+                    サインアウト{" "}
+                  </Button>
+                </div>
               );
             }
           })()}{" "}
@@ -443,6 +463,7 @@ class App extends Component {
             return (
               <DropdownTreeSelect
                 data={this.state.channels}
+                mode="radioSelect"
                 onChange={this.onTreeChange}
                 onAction={this.onTreeAction}
                 onNodeToggle={this.onTreeNodeToggle}
