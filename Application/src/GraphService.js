@@ -77,6 +77,27 @@ export async function getRepliesOfMessage(accessToken, teamId, channelId, messag
   return messages;
 }
 
+export async function postMessage(accessToken, teamId, channelId, messageId, messageText) {
+  const client = getAuthenticatedClient(accessToken);
+
+  var endpoint = 'https://graph.microsoft.com/beta/teams/' + teamId + '/channels/' + channelId + '/messages';
+  if (null != messageId) {
+    endpoint += '/' + messageId + '/replies';
+  }
+  const requestParams = {
+    body: {
+      content: messageText
+    }
+  };
+
+  const message = await client
+    .api(endpoint)
+    .post(requestParams);
+  console.log('message');
+  console.log(message);
+  return message;
+}
+
 
 export async function getUsers(accessToken) {
   const client = getAuthenticatedClient(accessToken);

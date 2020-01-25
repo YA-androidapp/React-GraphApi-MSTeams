@@ -13,7 +13,8 @@ import {
   getJoinedTeams,
   getMessagesOfChannel,
   getRepliesOfMessage,
-  getUsers
+  getUsers,
+  postMessage
 } from "./GraphService";
 import { getUserDetails } from "./GraphService";
 import { UserAgentApplication } from "msal";
@@ -123,6 +124,7 @@ class App extends Component {
       ],
 
       channels: [],
+      chatMessageText: "",
       teams: [],
       user: {},
       users: []
@@ -150,6 +152,7 @@ class App extends Component {
     this.onTreeChange = this.onTreeChange.bind(this);
     this.onTreeAction = this.onTreeAction.bind(this);
     this.onTreeNodeToggle = this.onTreeNodeToggle.bind(this);
+    this.postChatMessage = this.postChatMessage.bind(this);
 
     console.log("this.ReadJoinGraphUsers()");
     this.ReadJoinGraphUsers();
@@ -162,10 +165,6 @@ class App extends Component {
     var accessToken = await window.msal.acquireTokenSilent({
       scopes: config.scopes
     });
-    if (config.isDebug) {
-      console.log("accessToken");
-      console.log(accessToken);
-    }
 
     console.log("表示するチャネル:", currentNode.label, currentNode.value);
     var s = currentNode.value.split(" ");
@@ -184,6 +183,8 @@ class App extends Component {
     }
 
     this.setState({
+      teamId: s[0],
+      channelId: s[1],
       messages: gotmessages.value
     });
   }
@@ -195,6 +196,25 @@ class App extends Component {
   onTreeNodeToggle = currentNode => {
     console.log("onTreeNodeToggle:", currentNode);
   };
+
+  async postChatMessage() {
+    if (this.state.chatMessageText) {
+      console.log(this.state.chatMessageText);
+
+      // Get the user's accessr token
+      var accessToken = await window.msal.acquireTokenSilent({
+        scopes: config.scopes
+      });
+
+      postMessage(
+        accessToken,
+        this.state.teamId,
+        this.state.channelId,
+        this.state.messageId,
+        this.state.chatMessageText
+      );
+    }
+  }
 
   signout = () => {
     this.userAgentApplication.logout();
@@ -252,20 +272,19 @@ class App extends Component {
 
     try {
       console.log("ReadJoinGraphUsers");
+
       // Get the user's accessr token
       var accessToken = await window.msal.acquireTokenSilent({
         scopes: config.scopes
       });
-      if (config.isDebug) {
-        console.log("accessToken");
-        console.log(accessToken);
-      }
+
       // Get users
       var gotusers = await getUsers(accessToken);
       if (config.isDebug) {
         console.log("gotusers");
         console.log(gotusers);
       }
+
       // Update the array of users in state
       this.setState({
         users: gotusers.value
@@ -426,10 +445,6 @@ class App extends Component {
       var accessToken = await this.userAgentApplication.acquireTokenSilent({
         scopes: config.scopes
       });
-      if (config.isDebug) {
-        console.log("accessToken");
-        console.log(accessToken);
-      }
 
       if (accessToken) {
         // Get the user's profile from Graph
@@ -494,13 +509,34 @@ class App extends Component {
         {(() => {
           if (this.state.channels) {
             return (
-              <DropdownTreeSelect
-                data={this.state.channels}
-                mode="radioSelect"
-                onChange={this.onTreeChange}
-                onAction={this.onTreeAction}
-                onNodeToggle={this.onTreeNodeToggle}
-              />
+              <div>
+                <div>
+                  <input
+                    type="text"
+                    name="messageId"
+                    placeholder="messageId"
+                    value={this.state.messageId}
+                    onChange={e => this.setState({ messageId: e.target.value })}
+                  />
+                  <input
+                    type="text"
+                    name="chatMessageText"
+                    placeholder="chatMessageText"
+                    value={this.state.chatMessageText}
+                    onChange={e =>
+                      this.setState({ chatMessageText: e.target.value })
+                    }
+                  />
+                  <button onClick={this.postChatMessage}>Post</button>
+                </div>
+                <DropdownTreeSelect
+                  data={this.state.channels}
+                  mode="radioSelect"
+                  onChange={this.onTreeChange}
+                  onAction={this.onTreeAction}
+                  onNodeToggle={this.onTreeNodeToggle}
+                />
+              </div>
             );
           }
         })()}{" "}
