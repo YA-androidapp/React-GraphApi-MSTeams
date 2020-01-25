@@ -8,7 +8,12 @@ import Button from "@material-ui/core/Button";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { getChannelsOfTeam, getJoinedTeams, getUsers } from "./GraphService";
+import {
+  getChannelsOfTeam,
+  getJoinedTeams,
+  getMessagesOfChannel,
+  getUsers
+} from "./GraphService";
 import { getUserDetails } from "./GraphService";
 import { UserAgentApplication } from "msal";
 import config from "./Config";
@@ -149,11 +154,25 @@ class App extends Component {
     this.ReadJoinGraphUsers();
   }
 
-  onTreeChange = (currentNode, selectedNodes) => {
+  async onTreeChange(currentNode, selectedNodes) {
     console.log("onTreeChange:", currentNode, selectedNodes);
 
+    // Get the user's accessr token
+    var accessToken = await window.msal.acquireTokenSilent({
+      scopes: config.scopes
+    });
+    if (config.isDebug) {
+      console.log("accessToken");
+      console.log(accessToken);
+    }
+
     console.log("表示するチャネル:", currentNode.label, currentNode.value);
-  };
+    var s = currentNode.value.split(" ");
+    var gotmessages = await getMessagesOfChannel(accessToken, s[0], s[1]);
+    this.setState({
+      messages: gotmessages.value
+    });
+  }
 
   onTreeAction = (node, action) => {
     console.log("onTreeAction:", action, node);
@@ -276,7 +295,7 @@ class App extends Component {
         for (let j = 0, len = gotChannels.value.length; j < len; ++j) {
           var channel = {};
           channel.label = gotChannels.value[j].displayName;
-          channel.value = gotChannels.value[j].id;
+          channel.value = gotTeams.value[i].id + " " + gotChannels.value[j].id;
           team.children.push(channel);
         }
         allChannels.children.push(team);
@@ -454,8 +473,8 @@ class App extends Component {
           })()}{" "}
         </div>{" "}
         {(() => {
-          if (this.state.teams) {
-            return <JSONTree data={this.state.teams} />;
+          if (this.state.messages) {
+            return <JSONTree data={this.state.messages} />;
           }
         })()}{" "}
         {(() => {
@@ -469,6 +488,16 @@ class App extends Component {
                 onNodeToggle={this.onTreeNodeToggle}
               />
             );
+          }
+        })()}{" "}
+        {(() => {
+          if (this.state.channels) {
+            return <JSONTree data={this.state.channels} />;
+          }
+        })()}{" "}
+        {(() => {
+          if (this.state.teams) {
+            return <JSONTree data={this.state.teams} />;
           }
         })()}{" "}
         <MaterialTable

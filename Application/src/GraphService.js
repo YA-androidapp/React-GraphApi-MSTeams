@@ -59,7 +59,7 @@ export async function getMessagesOfChannel(accessToken, teamId, channelId) {
   const client = getAuthenticatedClient(accessToken);
 
   const messages = await client
-    .api('/teams/' + teamId + '/channels/' + channelId + '/messages')
+    .api('https://graph.microsoft.com/beta/teams/' + teamId + '/channels/' + channelId + '/messages')
     .get();
   // console.log('messages');
   // console.log(messages);
