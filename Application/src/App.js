@@ -139,7 +139,7 @@ class App extends Component {
       this.login();
     }
 
-    this.ReadJoinGraphUsers = this.ReadJoinGraphUsers.bind(this);
+    this.ReadGraphTeamsData = this.ReadGraphTeamsData.bind(this);
     this.signout = this.signout.bind(this);
     this.Notify = this.Notify.bind(this);
     this.onTreeChange = this.onTreeChange.bind(this);
@@ -147,8 +147,24 @@ class App extends Component {
     this.onTreeNodeToggle = this.onTreeNodeToggle.bind(this);
     this.postChatMessage = this.postChatMessage.bind(this);
 
-    console.log("this.ReadJoinGraphUsers()");
-    this.ReadJoinGraphUsers();
+    // console.log("this.ReadGraphTeamsData()");
+    // this.ReadGraphTeamsData();
+  }
+
+  componentDidMount() {
+    const loaded = localStorage.getItem("state");
+    if (loaded) {
+      if (config.isDebug) {
+        console.log("loaded");
+        console.log(loaded);
+        console.log(JSON.parse(loaded));
+      }
+
+      this.setState(JSON.parse(loaded));
+    } else {
+      console.log("this.ReadGraphTeamsData()");
+      this.ReadGraphTeamsData();
+    }
   }
 
   async onTreeChange(currentNode, selectedNodes) {
@@ -260,9 +276,9 @@ class App extends Component {
     }
   };
 
-  async ReadJoinGraphUsers() {
+  async ReadGraphTeamsData() {
     if (config.isDebug) {
-      console.log("ReadJoinGraphUsers()");
+      console.log("ReadGraphTeamsData()");
     }
 
     try {
@@ -343,17 +359,16 @@ class App extends Component {
         console.log("this.state.channels");
         console.log(this.state.channels);
       }
+      localStorage.setItem("state", JSON.stringify(this.state));
+      if (config.isDebug) {
+        console.log("localStorage.setItem");
+      }
 
       this.Notify("success", "[Graph API]チャネル読込みが完了しました。");
     } catch (err) {
       this.Notify(
         "error",
-        "エラーが発生しました: " +
-          err.message +
-          " : " +
-          err.fileName +
-          ":" +
-          err.lineNumber
+        `エラーが発生しました: ${err.message} : ${err.fileName} : ${err.lineNumber}`
       );
     }
   }
@@ -376,12 +391,7 @@ class App extends Component {
       });
       this.Notify(
         "error",
-        "エラーが発生しました: " +
-          err.message +
-          " : " +
-          err.fileName +
-          ":" +
-          err.lineNumber
+        `エラーが発生しました: ${err.message} : ${err.fileName} : ${err.lineNumber}`
       );
     }
   }
@@ -429,12 +439,7 @@ class App extends Component {
       });
       this.Notify(
         "error",
-        "エラーが発生しました: " +
-          err.message +
-          " : " +
-          err.fileName +
-          ":" +
-          err.lineNumber
+        `エラーが発生しました: ${err.message} : ${err.fileName} : ${err.lineNumber}`
       );
     }
   }
