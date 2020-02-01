@@ -153,33 +153,35 @@ class App extends Component {
 
   async onTreeChange(currentNode, selectedNodes) {
     console.log("onTreeChange:", currentNode, selectedNodes);
+    if (currentNode["checked"] === true && currentNode["_depth"] === 2) {
+      // Get the user's accessr token
+      var accessToken = await window.msal.acquireTokenSilent({
+        scopes: config.scopes
+      });
 
-    // Get the user's accessr token
-    var accessToken = await window.msal.acquireTokenSilent({
-      scopes: config.scopes
-    });
+      console.log("表示するチャネル:", currentNode.label, currentNode.value);
+      var s = currentNode.value.split(" ");
+      var gotmessages = await getMessagesOfChannel(accessToken, s[0], s[1]);
 
-    console.log("表示するチャネル:", currentNode.label, currentNode.value);
-    var s = currentNode.value.split(" ");
-    var gotmessages = await getMessagesOfChannel(accessToken, s[0], s[1]);
+      for (let i = 0, len = gotmessages.value.length; i < len; ++i) {
+        var r = await getRepliesOfMessage(
+          accessToken,
+          s[0],
+          s[1],
+          gotmessages.value[i].id
+        );
+        if (config.isDebug) {
+          console.log("gotmessages i:" + String(i) + " r.value:", r.value);
+        }
+        gotmessages.value[i].replies = r.value;
 
-    for (let i = 0, len = gotmessages.value.length; i < len; ++i) {
-      console.log("gotmessages i:" + String(i));
-      var r = await getRepliesOfMessage(
-        accessToken,
-        s[0],
-        s[1],
-        gotmessages.value[i].id
-      );
-      console.log("gotmessages r.value:", r.value);
-      gotmessages.value[i].replies = r.value;
+        this.setState({
+          teamId: s[0],
+          channelId: s[1],
+          messages: gotmessages.value
+        });
+      }
     }
-
-    this.setState({
-      teamId: s[0],
-      channelId: s[1],
-      messages: gotmessages.value
-    });
   }
 
   onTreeAction = (node, action) => {
@@ -264,75 +266,79 @@ class App extends Component {
     }
 
     try {
-      console.log("ReadJoinGraphUsers");
-
-      // Get the user's accessr token
+      // Get the user's access token
       var accessToken = await window.msal.acquireTokenSilent({
         scopes: config.scopes
       });
 
       // Get users
-      var gotusers = await getUsers(accessToken);
-      if (config.isDebug) {
-        console.log("gotusers");
-        console.log(gotusers);
+      if (this.state.users.length === 0) {
+        var gotusers = await getUsers(accessToken);
+        if (config.isDebug) {
+          console.log("gotusers");
+          console.log(gotusers);
+        }
+
+        // Update the array of users in state
+        this.setState({
+          users: gotusers.value
+        });
+
+        this.Notify("success", "[Graph API]ユーザー読込みが完了しました。");
       }
-
-      // Update the array of users in state
-      this.setState({
-        users: gotusers.value
-      });
-
-      this.Notify("success", "[Graph API]ユーザー読込みが完了しました。");
       if (config.isDebug) {
         console.log("gotusers.value");
         console.log(gotusers.value);
       }
 
-      var gotTeams = await getJoinedTeams(accessToken);
+      if (this.state.teams.length === 0) {
+        var gotTeams = await getJoinedTeams(accessToken);
+        if (config.isDebug) {
+          console.log("gotTeams.value");
+          console.log(gotTeams.value);
+        }
+        this.setState({
+          teams: gotTeams.value
+        });
+
+        this.Notify("success", "[Graph API]チーム読込みが完了しました。");
+      }
       if (config.isDebug) {
         console.log("gotTeams.value");
         console.log(gotTeams.value);
       }
-      this.setState({
-        teams: gotTeams.value
-      });
 
-      this.Notify("success", "[Graph API]チーム読込みが完了しました。");
-
-      if (config.isDebug) {
-        console.log("allChannels = {}");
-      }
-      const allChannels = {
-        label: "Channels",
-        value: "Channels",
-        children: []
-      };
-      for (let i = 0, len = gotTeams.value.length; i < len; ++i) {
-        var team = {}; // gotTeams.value[i];
-        console.log("i: " + String(i) + " team:" + gotTeams.value[i].id);
-        team.label = gotTeams.value[i].displayName;
-        team.value = gotTeams.value[i].id;
-        team.children = [];
-        var gotChannels = await getChannelsOfTeam(
-          accessToken,
-          gotTeams.value[i].id
-        );
-        for (let j = 0, len = gotChannels.value.length; j < len; ++j) {
-          var channel = {};
-          channel.label = gotChannels.value[j].displayName;
-          channel.value = gotTeams.value[i].id + " " + gotChannels.value[j].id;
-          team.children.push(channel);
+      if (this.state.channels.length === 0) {
+        const allChannels = {
+          label: "Channels",
+          value: "Channels",
+          children: []
+        };
+        for (let i = 0, len = gotTeams.value.length; i < len; ++i) {
+          var team = {}; // gotTeams.value[i];
+          if (config.isDebug) {
+            console.log("i: " + String(i) + " team:" + gotTeams.value[i].id);
+          }
+          team.label = gotTeams.value[i].displayName;
+          team.value = gotTeams.value[i].id;
+          team.children = [];
+          var gotChannels = await getChannelsOfTeam(
+            accessToken,
+            gotTeams.value[i].id
+          );
+          for (let j = 0, len = gotChannels.value.length; j < len; ++j) {
+            var channel = {};
+            channel.label = gotChannels.value[j].displayName;
+            channel.value =
+              gotTeams.value[i].id + " " + gotChannels.value[j].id;
+            team.children.push(channel);
+          }
+          allChannels.children.push(team);
+          this.setState({
+            channels: allChannels
+          });
         }
-        allChannels.children.push(team);
       }
-      if (config.isDebug) {
-        console.log("allChannels");
-        console.log(allChannels);
-      }
-      this.setState({
-        channels: allChannels
-      });
       if (config.isDebug) {
         console.log("this.state.channels");
         console.log(this.state.channels);
