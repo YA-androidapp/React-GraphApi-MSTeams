@@ -1,7 +1,5 @@
 import React, { Component } from "react";
 import MaterialTable from "material-table";
-// import { DragDropContext } from 'react-beautiful-dnd';
-import axios from "axios";
 
 import Button from "@material-ui/core/Button";
 
@@ -68,9 +66,6 @@ const tableIcons = {
   ViewColumn: forwardRef((props, ref) => <ViewColumn {...props} ref={ref} />)
 };
 //
-
-const FUNCTIONS_BASEURI = "https://example.azurewebsites.net/api/v1/User";
-const FUNCTIONS_KEY = "?code=********************";
 
 class App extends Component {
   constructor(props) {
@@ -147,8 +142,6 @@ class App extends Component {
     this.ReadJoinGraphUsers = this.ReadJoinGraphUsers.bind(this);
     this.signout = this.signout.bind(this);
     this.Notify = this.Notify.bind(this);
-    this.OnClickUpdate = this.OnClickUpdate.bind(this);
-    this.OnClickRemove = this.OnClickRemove.bind(this);
     this.onTreeChange = this.onTreeChange.bind(this);
     this.onTreeAction = this.onTreeAction.bind(this);
     this.onTreeNodeToggle = this.onTreeNodeToggle.bind(this);
@@ -359,42 +352,6 @@ class App extends Component {
     }
   }
 
-  OnClickUpdate(aadid) {
-    if (config.isDebug) {
-      console.log("OnClickUpdate(" + String(aadid) + ")");
-    }
-  }
-
-  OnClickRemove(aadid) {
-    if (config.isDebug) {
-      console.log("OnClickRemove(" + String(aadid) + ")");
-    }
-
-    axios
-      .delete(FUNCTIONS_BASEURI + "/" + aadid + FUNCTIONS_KEY)
-      .then(results => {
-        const status = results.status;
-        if (config.isDebug) {
-          console.log("status");
-          console.log(status);
-        }
-        if (status.toString() === "204") {
-          this.Notify("success", "[FUNCTIONS]削除が完了しました。");
-        }
-      })
-      .catch(err => {
-        this.Notify(
-          "error",
-          "エラーが発生しました: " +
-            err.message +
-            " : " +
-            err.fileName +
-            ":" +
-            err.lineNumber
-        );
-      });
-  }
-
   async login() {
     if (config.isDebug) {
       console.log("login()");
@@ -555,150 +512,6 @@ class App extends Component {
           title="React-GraphApi-MSTeams"
           columns={this.state.columns}
           data={this.state.users}
-          editable={{
-            onRowAdd: newData =>
-              new Promise((resolve, reject) => {
-                setTimeout(() => {
-                  axios
-                    .post(FUNCTIONS_BASEURI + FUNCTIONS_KEY, newData)
-                    .then(results => {
-                      const status = results.status;
-                      if (config.isDebug) {
-                        console.log("status");
-                        console.log(status);
-                      }
-                      if (status.toString() === "201") {
-                        this.Notify(
-                          "success",
-                          "[FUNCTIONS]追加が完了しました。"
-                        );
-
-                        const data = this.state.users;
-                        if (config.isDebug) {
-                          console.log("data");
-                          console.log(data);
-                        }
-                        data.push(newData);
-                        this.setState(
-                          {
-                            data
-                          },
-                          () => resolve()
-                        );
-                      }
-                    })
-                    .catch(() => {
-                      console.log("[FUNCTIONS]通信に失敗しました。");
-                    });
-                  resolve();
-                }, 1000);
-              }),
-            onRowUpdate: (newData, oldData) =>
-              new Promise((resolve, reject) => {
-                setTimeout(() => {
-                  axios
-                    .put(
-                      FUNCTIONS_BASEURI + "/" + oldData.aadid + FUNCTIONS_KEY,
-                      newData
-                    )
-                    .then(results => {
-                      const status = results.status;
-                      if (config.isDebug) {
-                        console.log("status");
-                        console.log(status);
-                      }
-                      if (status.toString() === "204") {
-                        this.Notify(
-                          "success",
-                          "[FUNCTIONS]保存が完了しました。"
-                        );
-
-                        const data = this.state.users;
-                        if (config.isDebug) {
-                          console.log("data");
-                          console.log(data);
-                        }
-                        const index = data.indexOf(oldData);
-                        if (config.isDebug) {
-                          console.log("index");
-                          console.log(index);
-                        }
-                        data[index] = newData;
-                        this.setState(
-                          {
-                            data
-                          },
-                          () => resolve()
-                        );
-                      }
-                    })
-                    .catch(err => {
-                      this.Notify(
-                        "error",
-                        "エラーが発生しました: " +
-                          err.message +
-                          " : " +
-                          err.fileName +
-                          ":" +
-                          err.lineNumber
-                      );
-                    });
-                  resolve();
-                }, 1000);
-              }),
-            onRowDelete: oldData =>
-              new Promise((resolve, reject) => {
-                setTimeout(() => {
-                  axios
-                    .delete(
-                      FUNCTIONS_BASEURI + "/" + oldData.aadid + FUNCTIONS_KEY
-                    )
-                    .then(results => {
-                      const status = results.status;
-                      if (config.isDebug) {
-                        console.log("status");
-                        console.log(status);
-                      }
-                      if (status.toString() === "204") {
-                        this.Notify(
-                          "success",
-                          "[FUNCTIONS]削除が完了しました。"
-                        );
-
-                        let data = this.state.users;
-                        if (config.isDebug) {
-                          console.log("data");
-                          console.log(data);
-                        }
-                        const index = data.indexOf(oldData);
-                        if (config.isDebug) {
-                          console.log("index");
-                          console.log(index);
-                        }
-                        data.splice(index, 1);
-                        this.setState(
-                          {
-                            data
-                          },
-                          () => resolve()
-                        );
-                      }
-                    })
-                    .catch(err => {
-                      this.Notify(
-                        "error",
-                        "エラーが発生しました: " +
-                          err.message +
-                          " : " +
-                          err.fileName +
-                          ":" +
-                          err.lineNumber
-                      );
-                    });
-                  resolve();
-                }, 1000);
-              })
-          }}
           options={{
             pageSize: 10,
             sorting: true
