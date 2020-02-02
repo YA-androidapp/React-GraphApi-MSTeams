@@ -76,7 +76,7 @@ export async function getMessagesOfChannel(accessToken, teamId, channelId) {
         teamId +
         "/channels/" +
         channelId +
-        "/messages"
+        "/messages?$top=50"
     )
     .get();
   // console.log('messages');

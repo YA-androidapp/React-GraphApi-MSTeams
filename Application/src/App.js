@@ -103,6 +103,27 @@ class App extends Component {
       channelName: "",
       channels: [],
       chatMessageText: "",
+      columnsMessageTable: [
+        {
+          title: "ID",
+          field: "id",
+          editable: "never"
+        },
+        {
+          title: "DisplayName",
+          field: "from.user.displayName",
+          editable: "never"
+        },
+        {
+          title: "Content",
+          field: "body.content"
+        },
+        {
+          title: "createdDateTime",
+          field: "createdDateTime",
+          editable: "never"
+        }
+      ],
       columnsUserTable: [
         {
           title: "ID",
@@ -631,6 +652,22 @@ class App extends Component {
         })()}{" "}
         {(() => {
           if (this.state.messages) {
+            return (
+              <MaterialTable
+                icons={tableIcons}
+                title="React-GraphApi-MSTeams"
+                columns={this.state.columnsMessageTable}
+                data={this.state.messages}
+                options={{
+                  pageSize: 50,
+                  sorting: true
+                }}
+              />
+            );
+          }
+        })()}{" "}
+        {(() => {
+          if (this.state.messages) {
             return <JSONTree data={this.state.messages} />;
           }
         })()}{" "}
@@ -650,7 +687,7 @@ class App extends Component {
           columns={this.state.columnsUserTable}
           data={this.state.users}
           options={{
-            pageSize: 10,
+            pageSize: 50,
             sorting: true
           }}
         />{" "}
