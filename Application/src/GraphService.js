@@ -1,11 +1,11 @@
-var graph = require('@microsoft/microsoft-graph-client');
+var graph = require("@microsoft/microsoft-graph-client");
 
 function getAuthenticatedClient(accessToken) {
   // Initialize Graph client
   const client = graph.Client.init({
     // Use the provided access token to authenticate
     // requests
-    authProvider: (done) => {
+    authProvider: done => {
       done(null, accessToken.accessToken);
     }
   });
@@ -16,40 +16,52 @@ function getAuthenticatedClient(accessToken) {
 export async function getUserDetails(accessToken) {
   const client = getAuthenticatedClient(accessToken);
 
-  const user = await client.api('/me').get();
+  const user = await client.api("/me").get();
   return user;
 }
 
 export async function getJoinedTeams(accessToken) {
   const client = getAuthenticatedClient(accessToken);
 
-  const teams = await client
-    .api('/me/joinedTeams')
-    .get();
+  const teams = await client.api("/me/joinedTeams").get();
   // console.log('teams');
   // console.log(teams);
   return teams;
 }
 
+export async function getTeam(accessToken, teamId) {
+  const client = getAuthenticatedClient(accessToken);
+
+  const teams = await client.api("/teams/" + teamId).get();
+  // console.log('teams');
+  // console.log(teams);
+  return teams;
+}
 
 export async function getMembersOfTeam(accessToken, teamId) {
   const client = getAuthenticatedClient(accessToken);
 
-  const members = await client
-    .api('/groups/' + teamId + '/members')
-    .get();
+  const members = await client.api("/groups/" + teamId + "/members").get();
   // console.log('members');
   // console.log(members);
   return members;
 }
 
+export async function getChannel(accessToken, teamId, channelId) {
+  const client = getAuthenticatedClient(accessToken);
+
+  const channels = await client
+    .api("/teams/" + teamId + "/channels/" + channelId)
+    .get();
+  // console.log('channels');
+  // console.log(channels);
+  return channels;
+}
 
 export async function getChannelsOfTeam(accessToken, teamId) {
   const client = getAuthenticatedClient(accessToken);
 
-  const channels = await client
-    .api('/teams/' + teamId + '/channels')
-    .get();
+  const channels = await client.api("/teams/" + teamId + "/channels").get();
   // console.log('channels');
   // console.log(channels);
   return channels;
@@ -59,30 +71,60 @@ export async function getMessagesOfChannel(accessToken, teamId, channelId) {
   const client = getAuthenticatedClient(accessToken);
 
   const messages = await client
-    .api('https://graph.microsoft.com/beta/teams/' + teamId + '/channels/' + channelId + '/messages')
+    .api(
+      "https://graph.microsoft.com/beta/teams/" +
+        teamId +
+        "/channels/" +
+        channelId +
+        "/messages"
+    )
     .get();
   // console.log('messages');
   // console.log(messages);
   return messages;
 }
 
-export async function getRepliesOfMessage(accessToken, teamId, channelId, messageId) {
+export async function getRepliesOfMessage(
+  accessToken,
+  teamId,
+  channelId,
+  messageId
+) {
   const client = getAuthenticatedClient(accessToken);
 
   const messages = await client
-    .api('https://graph.microsoft.com/beta/teams/' + teamId + '/channels/' + channelId + '/messages/' + messageId + '/replies')
+    .api(
+      "https://graph.microsoft.com/beta/teams/" +
+        teamId +
+        "/channels/" +
+        channelId +
+        "/messages/" +
+        messageId +
+        "/replies"
+    )
     .get();
   // console.log('messages');
   // console.log(messages);
   return messages;
 }
 
-export async function postMessage(accessToken, teamId, channelId, messageId, messageText) {
+export async function postMessage(
+  accessToken,
+  teamId,
+  channelId,
+  messageId,
+  messageText
+) {
   const client = getAuthenticatedClient(accessToken);
 
-  var endpoint = 'https://graph.microsoft.com/beta/teams/' + teamId + '/channels/' + channelId + '/messages';
+  var endpoint =
+    "https://graph.microsoft.com/beta/teams/" +
+    teamId +
+    "/channels/" +
+    channelId +
+    "/messages";
   if (null != messageId) {
-    endpoint += '/' + messageId + '/replies';
+    endpoint += "/" + messageId + "/replies";
   }
   const requestParams = {
     body: {
@@ -90,20 +132,17 @@ export async function postMessage(accessToken, teamId, channelId, messageId, mes
     }
   };
 
-  const message = await client
-    .api(endpoint)
-    .post(requestParams);
-  console.log('message');
+  const message = await client.api(endpoint).post(requestParams);
+  console.log("message");
   console.log(message);
   return message;
 }
-
 
 export async function getUsers(accessToken) {
   const client = getAuthenticatedClient(accessToken);
 
   const users = await client
-    .api('/users')
+    .api("/users")
     //.select('businessPhones,displayName,givenName,id,jobTitle,mail,mobilePhone,officeLocation,preferredLanguage,surname,userPrincipalName')
     // .orderby('internalId DESC')
     .get();

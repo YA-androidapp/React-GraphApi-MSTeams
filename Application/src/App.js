@@ -7,14 +7,17 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 import {
+  getChannel,
   getChannelsOfTeam,
   getJoinedTeams,
   getMessagesOfChannel,
   getRepliesOfMessage,
+  getTeam,
+  getUserDetails,
   getUsers,
   postMessage
 } from "./GraphService";
-import { getUserDetails } from "./GraphService";
+import { getQueryParams } from "./UrlUtil";
 import { UserAgentApplication } from "msal";
 import config from "./Config";
 
@@ -96,9 +99,11 @@ class App extends Component {
     }
 
     this.state = {
-      isAuthenticated: user !== null,
-
-      columns: [
+      channelId: "",
+      channelName: "",
+      channels: [],
+      chatMessageText: "",
+      columnsUserTable: [
         {
           title: "ID",
           field: "id",
@@ -117,9 +122,12 @@ class App extends Component {
           field: "mobilePhone"
         }
       ],
-
-      channels: [],
-      chatMessageText: "",
+      isAuthenticated: user !== null,
+      isDropdownTreeSelectDisabled: false,
+      messageId: "",
+      messages: [],
+      teamId: "",
+      teamName: "",
       teams: [],
       user: {},
       users: []
@@ -139,6 +147,7 @@ class App extends Component {
       this.login();
     }
 
+    this.ReadGraphMessagesData = this.ReadGraphMessagesData.bind(this);
     this.ReadGraphTeamsData = this.ReadGraphTeamsData.bind(this);
     this.signout = this.signout.bind(this);
     this.Notify = this.Notify.bind(this);
@@ -146,12 +155,34 @@ class App extends Component {
     this.onTreeAction = this.onTreeAction.bind(this);
     this.onTreeNodeToggle = this.onTreeNodeToggle.bind(this);
     this.postChatMessage = this.postChatMessage.bind(this);
-
-    // console.log("this.ReadGraphTeamsData()");
-    // this.ReadGraphTeamsData();
   }
 
-  componentDidMount() {
+  async componentDidMount() {
+    const params = getQueryParams(window.location.search);
+
+    // forceパラメータがある場合は強制的にサーバから情報取得
+    if (params["force"]) {
+      console.log("this.ReadGraphTeamsData()");
+      await this.ReadGraphTeamsData();
+      return;
+    }
+
+    if (params["teamId"] && params["channelId"]) {
+      if (config.isDebug) {
+        console.log('params["teamId"]');
+        console.log(params["teamId"]);
+        console.log('params["channelId"]');
+        console.log(params["channelId"]);
+
+        console.log("this.ReadGraphMessagesData();this.ReadGraphTeamsData()");
+      }
+      this.ReadGraphMessagesData(params["teamId"], "", params["channelId"], "");
+      await this.ReadGraphTeamsData(
+        params["teamId"] + "/" + params["channelId"]
+      );
+      return;
+    }
+
     const loaded = localStorage.getItem("state");
     if (loaded) {
       if (config.isDebug) {
@@ -161,42 +192,51 @@ class App extends Component {
       }
 
       this.setState(JSON.parse(loaded));
-    } else {
-      console.log("this.ReadGraphTeamsData()");
-      this.ReadGraphTeamsData();
     }
+
+    if (config.isDebug) {
+      console.log("this.ReadGraphTeamsData()");
+    }
+    await this.ReadGraphTeamsData();
   }
 
   async onTreeChange(currentNode, selectedNodes) {
-    console.log("onTreeChange:", currentNode, selectedNodes);
-    if (currentNode["checked"] === true && currentNode["_depth"] === 2) {
-      // Get the user's accessr token
-      var accessToken = await window.msal.acquireTokenSilent({
-        scopes: config.scopes
-      });
-
-      console.log("表示するチャネル:", currentNode.label, currentNode.value);
-      var s = currentNode.value.split(" ");
-      var gotmessages = await getMessagesOfChannel(accessToken, s[0], s[1]);
-
-      for (let i = 0, len = gotmessages.value.length; i < len; ++i) {
-        var r = await getRepliesOfMessage(
-          accessToken,
-          s[0],
-          s[1],
-          gotmessages.value[i].id
+    if (config.isDebug) {
+      console.log("onTreeChange:", currentNode, selectedNodes);
+    }
+    if (selectedNodes.length === 1 && selectedNodes[0]["_depth"] === 2) {
+      var splitedvalue = selectedNodes[0].value.split("/");
+      var splitedLabel = selectedNodes[0].label.split("/");
+      if (config.isDebug) {
+        console.log(
+          "onTreeChange:",
+          this.state.teamId,
+          splitedvalue[0],
+          this.state.channelId,
+          splitedvalue[1]
         );
-        if (config.isDebug) {
-          console.log("gotmessages i:" + String(i) + " r.value:", r.value);
-        }
-        gotmessages.value[i].replies = r.value;
-
-        this.setState({
-          teamId: s[0],
-          channelId: s[1],
-          messages: gotmessages.value
-        });
       }
+      if (
+        this.state.teamId !== splitedvalue[0] ||
+        this.state.channelId !== splitedvalue[1]
+      ) {
+        if (config.isDebug) {
+          console.log(
+            "表示するチャネル:",
+            splitedvalue[0],
+            splitedLabel[0],
+            splitedvalue[1],
+            splitedLabel[1]
+          );
+        }
+        await this.ReadGraphMessagesData(
+          splitedvalue[0],
+          splitedLabel[0],
+          splitedvalue[1],
+          splitedLabel[1]
+        );
+      }
+      return;
     }
   }
 
@@ -276,7 +316,69 @@ class App extends Component {
     }
   };
 
-  async ReadGraphTeamsData() {
+  async ReadGraphMessagesData(teamId, teamName, channelId, channelName) {
+    if (config.isDebug) {
+      console.log("ReadGraphMessagesData()");
+    }
+
+    this.setState({
+      isDropdownTreeSelectDisabled: true
+    });
+
+    // Get the user's accessr token
+    var accessToken = await window.msal.acquireTokenSilent({
+      scopes: config.scopes
+    });
+
+    if (teamName === "" || channelName === "") {
+      var gotTeam = await getTeam(accessToken, teamId);
+      console.log("gotTeam");
+      console.log(gotTeam);
+      teamName = gotTeam.displayName;
+
+      var gotChannel = await getChannel(accessToken, teamId, channelId);
+      console.log("gotChannel");
+      console.log(gotChannel);
+      channelName = gotChannel.displayName;
+    }
+
+    var gotmessages = await getMessagesOfChannel(
+      accessToken,
+      teamId,
+      channelId
+    );
+    if (config.isDebug) {
+      console.log("gotmessages");
+      console.log(gotmessages);
+    }
+
+    for (let i = 0, len = gotmessages.value.length; i < len; ++i) {
+      var r = await getRepliesOfMessage(
+        accessToken,
+        teamId,
+        channelId,
+        gotmessages.value[i].id
+      );
+      if (config.isDebug) {
+        console.log("gotmessages i:" + String(i) + " r.value:", r.value);
+      }
+      gotmessages.value[i].replies = r.value;
+
+      this.setState({
+        teamId: teamId,
+        teamName: teamName,
+        channelId: channelId,
+        channelName: channelName,
+        messages: gotmessages.value
+      });
+    }
+
+    this.setState({
+      isDropdownTreeSelectDisabled: false
+    });
+  }
+
+  async ReadGraphTeamsData(defaultValue = null) {
     if (config.isDebug) {
       console.log("ReadGraphTeamsData()");
     }
@@ -303,8 +405,8 @@ class App extends Component {
         this.Notify("success", "[Graph API]ユーザー読込みが完了しました。");
       }
       if (config.isDebug) {
-        console.log("gotusers.value");
-        console.log(gotusers.value);
+        console.log("this.state.users");
+        console.log(this.state.users);
       }
 
       if (this.state.teams.length === 0) {
@@ -320,8 +422,8 @@ class App extends Component {
         this.Notify("success", "[Graph API]チーム読込みが完了しました。");
       }
       if (config.isDebug) {
-        console.log("gotTeams.value");
-        console.log(gotTeams.value);
+        console.log("this.state.teams");
+        console.log(this.state.teams);
       }
 
       if (this.state.channels.length === 0) {
@@ -330,23 +432,29 @@ class App extends Component {
           value: "Channels",
           children: []
         };
-        for (let i = 0, len = gotTeams.value.length; i < len; ++i) {
-          var team = {}; // gotTeams.value[i];
+        for (let i = 0, len = this.state.teams.length; i < len; ++i) {
+          var team = this.state.teams[i]; // {};
           if (config.isDebug) {
-            console.log("i: " + String(i) + " team:" + gotTeams.value[i].id);
+            console.log("i: " + String(i) + " team:" + this.state.teams[i].id);
           }
-          team.label = gotTeams.value[i].displayName;
-          team.value = gotTeams.value[i].id;
+          team.desc = this.state.teams[i].description;
+          team.label = this.state.teams[i].displayName;
+          team.value = this.state.teams[i].id;
           team.children = [];
           var gotChannels = await getChannelsOfTeam(
             accessToken,
-            gotTeams.value[i].id
+            this.state.teams[i].id
           );
           for (let j = 0, len = gotChannels.value.length; j < len; ++j) {
-            var channel = {};
-            channel.label = gotChannels.value[j].displayName;
-            channel.value =
-              gotTeams.value[i].id + " " + gotChannels.value[j].id;
+            const l =
+              this.state.teams[i].displayName +
+              "/" +
+              gotChannels.value[j].displayName;
+            const v = this.state.teams[i].id + "/" + gotChannels.value[j].id;
+            var channel = gotChannels.value[j]; // {};
+            channel.desc = this.state.teams[i].description;
+            channel.label = l;
+            channel.value = v;
             team.children.push(channel);
           }
           allChannels.children.push(team);
@@ -359,9 +467,23 @@ class App extends Component {
         console.log("this.state.channels");
         console.log(this.state.channels);
       }
-      localStorage.setItem("state", JSON.stringify(this.state));
+
       if (config.isDebug) {
         console.log("localStorage.setItem");
+        console.log("JSON.stringify(this.state)");
+        console.log(JSON.stringify(this.state));
+        console.log("JSON.stringify(valuesToSave)");
+      }
+      const valuesToSave = {
+        channels: this.state.channels,
+        teams: this.state.teams,
+        users: this.state.users
+      };
+      // localStorage.setItem("state", JSON.stringify(this.state));
+      localStorage.setItem("state", JSON.stringify(valuesToSave));
+
+      if (config.isDebug) {
+        console.log(JSON.stringify(valuesToSave));
       }
 
       this.Notify("success", "[Graph API]チャネル読込みが完了しました。");
@@ -431,6 +553,7 @@ class App extends Component {
             email: usr.mail || usr.userPrincipalName
           }
         });
+        console.log("setState");
       }
     } catch (err) {
       this.setState({
@@ -445,22 +568,15 @@ class App extends Component {
   }
 
   render() {
-    if (config.isDebug) {
-      console.log("render()");
-    }
-
     return (
       <div>
         <div>
-          {" "}
           {(() => {
             if (this.state.isAuthenticated) {
               return (
                 <div>
-                  <div>
-                    ようこそ、{this.state.user.displayName} (
-                    {this.state.user.email})さん
-                  </div>
+                  ようこそ、{this.state.user.displayName} (
+                  {this.state.user.email})さん{"   "}
                   <Button variant="contained" onClick={this.signout}>
                     サインアウト{" "}
                   </Button>
@@ -470,42 +586,52 @@ class App extends Component {
           })()}{" "}
         </div>{" "}
         {(() => {
-          if (this.state.messages) {
-            return <JSONTree data={this.state.messages} />;
-          }
-        })()}{" "}
-        {(() => {
           if (this.state.channels) {
             return (
               <div>
                 <div>
-                  <input
-                    type="text"
-                    name="messageId"
-                    placeholder="messageId"
-                    value={this.state.messageId}
-                    onChange={e => this.setState({ messageId: e.target.value })}
-                  />
-                  <input
-                    type="text"
-                    name="chatMessageText"
-                    placeholder="chatMessageText"
-                    value={this.state.chatMessageText}
-                    onChange={e =>
-                      this.setState({ chatMessageText: e.target.value })
-                    }
-                  />
-                  <button onClick={this.postChatMessage}>Post</button>
+                  <div>
+                    <DropdownTreeSelect
+                      data={this.state.channels}
+                      disabled={this.state.isDropdownTreeSelectDisabled}
+                      mode="radioSelect"
+                      onChange={this.onTreeChange}
+                      onAction={this.onTreeAction}
+                      onNodeToggle={this.onTreeNodeToggle}
+                      texts={{ placeholder: "Select a Channel..." }}
+                    />
+                    {this.state.teamName} {this.state.teamId}{" "}
+                    {this.state.channelName} {this.state.channelId}{" "}
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      name="messageId"
+                      placeholder="messageId"
+                      value={this.state.messageId}
+                      onChange={e =>
+                        this.setState({ messageId: e.target.value })
+                      }
+                    />
+                    <input
+                      type="text"
+                      name="chatMessageText"
+                      placeholder="chatMessageText"
+                      value={this.state.chatMessageText}
+                      onChange={e =>
+                        this.setState({ chatMessageText: e.target.value })
+                      }
+                    />
+                    <button onClick={this.postChatMessage}>Post</button>
+                  </div>
                 </div>
-                <DropdownTreeSelect
-                  data={this.state.channels}
-                  mode="radioSelect"
-                  onChange={this.onTreeChange}
-                  onAction={this.onTreeAction}
-                  onNodeToggle={this.onTreeNodeToggle}
-                />
               </div>
             );
+          }
+        })()}{" "}
+        {(() => {
+          if (this.state.messages) {
+            return <JSONTree data={this.state.messages} />;
           }
         })()}{" "}
         {(() => {
@@ -521,7 +647,7 @@ class App extends Component {
         <MaterialTable
           icons={tableIcons}
           title="React-GraphApi-MSTeams"
-          columns={this.state.columns}
+          columns={this.state.columnsUserTable}
           data={this.state.users}
           options={{
             pageSize: 10,
