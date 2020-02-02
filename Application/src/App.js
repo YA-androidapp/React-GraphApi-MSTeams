@@ -1,11 +1,5 @@
-import React, { Component } from "react";
-import MaterialTable from "material-table";
-
-import Button from "@material-ui/core/Button";
-
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-
+import { UserAgentApplication } from "msal";
+import config from "./Config";
 import {
   getChannel,
   getChannelsOfTeam,
@@ -18,8 +12,10 @@ import {
   postMessage
 } from "./GraphService";
 import { getQueryParams } from "./UrlUtil";
-import { UserAgentApplication } from "msal";
-import config from "./Config";
+
+// yarn add @material-ui/core
+// yarn add @material-ui/icons
+import Button from "@material-ui/core/Button";
 
 // yarn add react-json-tree
 import JSONTree from "react-json-tree";
@@ -28,47 +24,16 @@ import JSONTree from "react-json-tree";
 import DropdownTreeSelect from "react-dropdown-tree-select";
 import "react-dropdown-tree-select/dist/styles.css";
 
-// Icons
-import { forwardRef } from "react";
-import AddBox from "@material-ui/icons/AddBox";
-import ArrowUpward from "@material-ui/icons/ArrowUpward";
-import Check from "@material-ui/icons/Check";
-import ChevronLeft from "@material-ui/icons/ChevronLeft";
-import ChevronRight from "@material-ui/icons/ChevronRight";
-import Clear from "@material-ui/icons/Clear";
-import DeleteOutline from "@material-ui/icons/DeleteOutline";
-import Edit from "@material-ui/icons/Edit";
-import FilterList from "@material-ui/icons/FilterList";
-import FirstPage from "@material-ui/icons/FirstPage";
-import LastPage from "@material-ui/icons/LastPage";
-import Remove from "@material-ui/icons/Remove";
-import SaveAlt from "@material-ui/icons/SaveAlt";
-import Search from "@material-ui/icons/Search";
-import ViewColumn from "@material-ui/icons/ViewColumn";
-const tableIcons = {
-  Add: forwardRef((props, ref) => <AddBox {...props} ref={ref} />),
-  Check: forwardRef((props, ref) => <Check {...props} ref={ref} />),
-  Clear: forwardRef((props, ref) => <Clear {...props} ref={ref} />),
-  Delete: forwardRef((props, ref) => <DeleteOutline {...props} ref={ref} />),
-  DetailPanel: forwardRef((props, ref) => (
-    <ChevronRight {...props} ref={ref} />
-  )),
-  Edit: forwardRef((props, ref) => <Edit {...props} ref={ref} />),
-  Export: forwardRef((props, ref) => <SaveAlt {...props} ref={ref} />),
-  Filter: forwardRef((props, ref) => <FilterList {...props} ref={ref} />),
-  FirstPage: forwardRef((props, ref) => <FirstPage {...props} ref={ref} />),
-  LastPage: forwardRef((props, ref) => <LastPage {...props} ref={ref} />),
-  NextPage: forwardRef((props, ref) => <ChevronRight {...props} ref={ref} />),
-  PreviousPage: forwardRef((props, ref) => (
-    <ChevronLeft {...props} ref={ref} />
-  )),
-  ResetSearch: forwardRef((props, ref) => <Clear {...props} ref={ref} />),
-  Search: forwardRef((props, ref) => <Search {...props} ref={ref} />),
-  SortArrow: forwardRef((props, ref) => <ArrowUpward {...props} ref={ref} />),
-  ThirdStateCheck: forwardRef((props, ref) => <Remove {...props} ref={ref} />),
-  ViewColumn: forwardRef((props, ref) => <ViewColumn {...props} ref={ref} />)
-};
-//
+// yarn add material-table
+import Icon from "@material-ui/core/Icon";
+import React, { Component } from "react";
+import ReactDOM from "react-dom";
+import MaterialTable from "material-table";
+
+// yarn add react-toastify
+// import React, { Component } from 'react';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 class App extends Component {
   constructor(props) {
@@ -591,6 +556,10 @@ class App extends Component {
   render() {
     return (
       <div>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/icon?family=Material+Icons"
+        ></link>
         <div>
           {(() => {
             if (this.state.isAuthenticated) {
@@ -654,12 +623,23 @@ class App extends Component {
           if (this.state.messages) {
             return (
               <MaterialTable
-                icons={tableIcons}
+                actions={[
+                  {
+                    icon: "reply",
+                    tooltip: "",
+                    onClick: (event, rowData) => {
+                      console.log("onClick()", rowData);
+                      this.setState({
+                        messageId: rowData.id
+                      });
+                    }
+                  }
+                ]}
                 title="React-GraphApi-MSTeams"
                 columns={this.state.columnsMessageTable}
                 data={this.state.messages}
                 options={{
-                  pageSize: 50,
+                  pageSize: 20,
                   sorting: true
                 }}
               />
@@ -682,12 +662,11 @@ class App extends Component {
           }
         })()}{" "}
         <MaterialTable
-          icons={tableIcons}
           title="React-GraphApi-MSTeams"
           columns={this.state.columnsUserTable}
           data={this.state.users}
           options={{
-            pageSize: 50,
+            pageSize: 20,
             sorting: true
           }}
         />{" "}
