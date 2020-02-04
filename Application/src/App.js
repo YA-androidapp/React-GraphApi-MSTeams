@@ -64,8 +64,6 @@ class App extends Component {
     }
 
     this.state = {
-      channelId: "",
-      channelName: "",
       channels: [],
       chatMessageText: "",
       columnsMessageTable: [
@@ -110,11 +108,20 @@ class App extends Component {
       ],
       isAuthenticated: user !== null,
       isDropdownTreeSelectDisabled: false,
-      messageId: "",
       messages: [],
-      teamId: "",
-      teamName: "",
-      teams: [],
+      selected: {
+        channel: {
+          description: "",
+          id: "",
+          name: ""
+        },
+        message: { id: "" },
+        team: {
+          description: "",
+          id: "",
+          teamName: ""
+        },
+      },
       user: {},
       users: []
     };
