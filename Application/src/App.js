@@ -120,7 +120,7 @@ class App extends Component {
           description: "",
           id: "",
           teamName: ""
-        },
+        }
       },
       user: {},
       users: []
@@ -203,15 +203,15 @@ class App extends Component {
       if (config.isDebug) {
         console.log(
           "onTreeChange:",
-          this.state.teamId,
+          this.state.selected.team.id,
           splitedvalue[0],
-          this.state.channelId,
+          this.state.selected.channel.id,
           splitedvalue[1]
         );
       }
       if (
-        this.state.teamId !== splitedvalue[0] ||
-        this.state.channelId !== splitedvalue[1]
+        this.state.selected.team.id !== splitedvalue[0] ||
+        this.state.selected.channel.id !== splitedvalue[1]
       ) {
         if (config.isDebug) {
           console.log(
@@ -252,9 +252,9 @@ class App extends Component {
 
       postMessage(
         accessToken,
-        this.state.teamId,
-        this.state.channelId,
-        this.state.messageId,
+        this.state.selected.team.id,
+        this.state.selected.channel.id,
+        this.state.selected.message.id,
         this.state.chatMessageText
       );
     }
@@ -358,11 +358,17 @@ class App extends Component {
       gotmessages.value[i].replies = r.value;
 
       this.setState({
-        teamId: teamId,
-        teamName: teamName,
-        channelId: channelId,
-        channelName: channelName,
-        messages: gotmessages.value
+        messages: gotmessages.value,
+        selected: {
+          channel: {
+            id: channelId,
+            name: channelName
+          },
+          team: {
+            id: teamId,
+            name: teamName
+          }
+        }
       });
     }
 
@@ -383,7 +389,7 @@ class App extends Component {
       });
 
       // Get users
-      if (this.state.users.length === 0) {
+      if (!this.state.users.length) {
         var gotusers = await getUsers(accessToken);
         if (config.isDebug) {
           console.log("gotusers");
@@ -402,7 +408,7 @@ class App extends Component {
         console.log(this.state.users);
       }
 
-      if (this.state.teams.length === 0) {
+      if (!this.state.teams) {
         var gotTeams = await getJoinedTeams(accessToken);
         if (config.isDebug) {
           console.log("gotTeams.value");
@@ -419,8 +425,8 @@ class App extends Component {
         console.log(this.state.teams);
       }
 
-      if (this.state.channels.length === 0) {
-        const allChannels = {
+      if (!this.state.channels) {
+        const channels = {
           label: "Channels",
           value: "Channels",
           children: []
@@ -450,9 +456,9 @@ class App extends Component {
             channel.value = v;
             team.children.push(channel);
           }
-          allChannels.children.push(team);
+          channels.children.push(team);
           this.setState({
-            channels: allChannels
+            channels: channels
           });
         }
       }
@@ -597,18 +603,44 @@ class App extends Component {
                       onNodeToggle={this.onTreeNodeToggle}
                       texts={{ placeholder: "Select a Channel..." }}
                     />
-                    {this.state.teamName} {this.state.teamId}{" "}
-                    {this.state.channelName} {this.state.channelId}{" "}
+                    {this.state.selected
+                      ? (this.state.selected.team
+                          ? (this.state.selected.team.name
+                              ? this.state.selected.team.name
+                              : "") +
+                            " " +
+                            (this.state.selected.team.id
+                              ? "( " + this.state.selected.team.id + " )"
+                              : "")
+                          : "") +
+                        (this.state.selected.channel
+                          ? (this.state.selected.channel.name
+                              ? " / " + this.state.selected.channel.name
+                              : "") +
+                            " " +
+                            (this.state.selected.channel.id
+                              ? "( " + this.state.selected.channel.id + " )"
+                              : "")
+                          : "")
+                      : ""}{" "}
                   </div>
                   <div>
                     <input
                       type="text"
                       name="messageId"
                       placeholder="messageId"
-                      value={this.state.messageId}
-                      onChange={e =>
-                        this.setState({ messageId: e.target.value })
+                      value={
+                        this.state.selected.message
+                          ? this.state.selected.message.id
+                          : ""
                       }
+                      onChange={e => {
+                        let s = Object.assign({}, this.state);
+                        s["selected"]["message"] = {
+                          id: e.target.value
+                        };
+                        this.setState(s);
+                      }}
                     />
                     <input
                       type="text"
@@ -636,9 +668,11 @@ class App extends Component {
                     tooltip: "",
                     onClick: (event, rowData) => {
                       console.log("onClick()", rowData);
-                      this.setState({
-                        messageId: rowData.id
-                      });
+                      let s = Object.assign({}, this.state);
+                      s["selected"]["message"] = {
+                        id: rowData.id
+                      };
+                      this.setState(s);
                     }
                   }
                 ]}
