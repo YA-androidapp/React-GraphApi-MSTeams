@@ -1,5 +1,6 @@
 import { UserAgentApplication } from "msal";
 import config from "./Config";
+import MessageCardList from './MessageCardList'
 import {
   getChannel,
   getChannelsOfTeam,
@@ -605,23 +606,23 @@ class App extends Component {
                     />
                     {this.state.selected
                       ? (this.state.selected.team
-                          ? (this.state.selected.team.name
-                              ? this.state.selected.team.name
-                              : "") +
-                            " " +
-                            (this.state.selected.team.id
-                              ? "( " + this.state.selected.team.id + " )"
-                              : "")
+                        ? (this.state.selected.team.name
+                          ? this.state.selected.team.name
                           : "") +
-                        (this.state.selected.channel
-                          ? (this.state.selected.channel.name
-                              ? " / " + this.state.selected.channel.name
-                              : "") +
-                            " " +
-                            (this.state.selected.channel.id
-                              ? "( " + this.state.selected.channel.id + " )"
-                              : "")
+                        " " +
+                        (this.state.selected.team.id
+                          ? "( " + this.state.selected.team.id + " )"
                           : "")
+                        : "") +
+                      (this.state.selected.channel
+                        ? (this.state.selected.channel.name
+                          ? " / " + this.state.selected.channel.name
+                          : "") +
+                        " " +
+                        (this.state.selected.channel.id
+                          ? "( " + this.state.selected.channel.id + " )"
+                          : "")
+                        : "")
                       : ""}{" "}
                   </div>
                   <div>
@@ -655,6 +656,16 @@ class App extends Component {
                   </div>
                 </div>
               </div>
+            );
+          }
+        })()}{" "}
+        {(() => {
+          if (this.state.messages) {
+            return (
+              <MessageCardList
+                messages={this.state.messages}
+              >
+              </MessageCardList>
             );
           }
         })()}{" "}
