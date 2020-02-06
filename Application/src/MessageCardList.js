@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import PropTypes from 'prop-types';
+import MessageCard from './MessageCard';
 
 class MessageCardList extends Component {
     render() {
@@ -7,15 +7,12 @@ class MessageCardList extends Component {
             <ul>
                 {
                     this.props.messages.map(message => {
-                        return <li key={message.id}>{message.id} {message.body.content}</li>
+                        return <MessageCard message={message}></MessageCard>
                     })
                 }
             </ul>
         );
     }
-}
-MessageCardList.propTypes = {
-    onClick: PropTypes.func
 }
 
 export default MessageCardList

@@ -1,6 +1,6 @@
 import { UserAgentApplication } from "msal";
 import config from "./Config";
-import MessageCardList from './MessageCardList'
+import MessageCardList from './MessageCardList';
 import {
   getChannel,
   getChannelsOfTeam,
@@ -156,8 +156,8 @@ class App extends Component {
 
     // forceパラメータがある場合は強制的にサーバから情報取得
     if (params["force"]) {
-      console.log("this.ReadGraphTeamsData()");
-      await this.ReadGraphTeamsData();
+      console.log("this.ReadGraphTeamsData(true)");
+      await this.ReadGraphTeamsData(true);
       return;
     }
 
@@ -168,12 +168,10 @@ class App extends Component {
         console.log('params["channelId"]');
         console.log(params["channelId"]);
 
-        console.log("this.ReadGraphMessagesData();this.ReadGraphTeamsData()");
+        console.log("this.ReadGraphMessagesData();this.ReadGraphTeamsData(false)");
       }
       this.ReadGraphMessagesData(params["teamId"], "", params["channelId"], "");
-      await this.ReadGraphTeamsData(
-        params["teamId"] + "/" + params["channelId"]
-      );
+      await this.ReadGraphTeamsData(false);
       return;
     }
 
@@ -189,9 +187,9 @@ class App extends Component {
     }
 
     if (config.isDebug) {
-      console.log("this.ReadGraphTeamsData()");
+      console.log("this.ReadGraphTeamsData(false)");
     }
-    await this.ReadGraphTeamsData();
+    await this.ReadGraphTeamsData(false);
   }
 
   async onTreeChange(currentNode, selectedNodes) {
@@ -378,9 +376,9 @@ class App extends Component {
     });
   }
 
-  async ReadGraphTeamsData(defaultValue = null) {
+  async ReadGraphTeamsData(force = false) {
     if (config.isDebug) {
-      console.log("ReadGraphTeamsData()");
+      console.log("ReadGraphTeamsData(" + String(force) + ")");
     }
 
     try {
@@ -390,7 +388,7 @@ class App extends Component {
       });
 
       // Get users
-      if (params["force"] || !this.state.users || 0 === this.state.users.length) {
+      if (force || !this.state.users || 0 === this.state.users.length) {
         var gotusers = await getUsers(accessToken);
         if (config.isDebug) {
           console.log("gotusers");
@@ -409,7 +407,7 @@ class App extends Component {
         console.log(this.state.users);
       }
 
-      if (params["force"] || !this.state.teams || 0 === this.state.teams.length) {
+      if (force || !this.state.teams || 0 === this.state.teams.length) {
         var gotTeams = await getJoinedTeams(accessToken);
         if (config.isDebug) {
           console.log("gotTeams.value");
@@ -426,7 +424,7 @@ class App extends Component {
         console.log(this.state.teams);
       }
 
-      if (params["force"] || !this.state.channels || 0 === this.state.channels.length) {
+      if (force || !this.state.channels || 0 === this.state.channels.length) {
         const channels = {
           label: "Channels",
           value: "Channels",
