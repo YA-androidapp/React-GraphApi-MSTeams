@@ -390,7 +390,7 @@ class App extends Component {
       });
 
       // Get users
-      if (!this.state.users || 0 === this.state.users.length) {
+      if (params["force"] || !this.state.users || 0 === this.state.users.length) {
         var gotusers = await getUsers(accessToken);
         if (config.isDebug) {
           console.log("gotusers");
@@ -409,7 +409,7 @@ class App extends Component {
         console.log(this.state.users);
       }
 
-      if (!this.state.teams || 0 === this.state.teams.length) {
+      if (params["force"] || !this.state.teams || 0 === this.state.teams.length) {
         var gotTeams = await getJoinedTeams(accessToken);
         if (config.isDebug) {
           console.log("gotTeams.value");
@@ -426,7 +426,7 @@ class App extends Component {
         console.log(this.state.teams);
       }
 
-      if (!this.state.channels || 0 === this.state.channels.length) {
+      if (params["force"] || !this.state.channels || 0 === this.state.channels.length) {
         const channels = {
           label: "Channels",
           value: "Channels",

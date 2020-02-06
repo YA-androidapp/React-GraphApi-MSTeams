@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 class MessageCardList extends Component {
     render() {
         return (
-            < ul >
+            <ul>
                 {
                     this.props.messages.map(message => {
                         return <li key={message.id}>{message.id} {message.body.content}</li>
