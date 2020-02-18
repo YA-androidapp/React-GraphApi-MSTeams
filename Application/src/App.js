@@ -1,6 +1,6 @@
 import { UserAgentApplication } from "msal";
 import config from "./Config";
-import MessageCardList from './MessageCardList';
+import MessageCardList from "./MessageCardList";
 import {
   getChannel,
   getChannelsOfTeam,
@@ -66,7 +66,7 @@ class App extends Component {
 
     this.state = {
       channels: [],
-      chatMessageText: '',
+      chatMessageText: "",
       columnsMessageTable: [
         {
           title: "ID",
@@ -112,15 +112,15 @@ class App extends Component {
       messages: [],
       selected: {
         channel: {
-          description: '',
-          id: '',
-          name: ''
+          description: "",
+          id: "",
+          name: ""
         },
-        message: { id: '' },
+        message: { id: "" },
         team: {
-          description: '',
-          id: '',
-          teamName: ''
+          description: "",
+          id: "",
+          teamName: ""
         }
       },
       user: {},
@@ -168,9 +168,11 @@ class App extends Component {
         console.log('params["channelId"]');
         console.log(params["channelId"]);
 
-        console.log("this.ReadGraphMessagesData();this.ReadGraphTeamsData(false)");
+        console.log(
+          "this.ReadGraphMessagesData();this.ReadGraphTeamsData(false)"
+        );
       }
-      this.ReadGraphMessagesData(params["teamId"], '', params["channelId"], '');
+      this.ReadGraphMessagesData(params["teamId"], "", params["channelId"], "");
       await this.ReadGraphTeamsData(false);
       return;
     }
@@ -253,8 +255,11 @@ class App extends Component {
         accessToken,
         this.state.selected.team.id,
         this.state.selected.channel.id,
-        this.state.selected.message.id,
-        this.state.chatMessageText
+        "undefined" != typeof this.state.selected.message &&
+          "undefined" != typeof this.state.selected.message.id
+          ? this.state.selected.message.id
+          : "",
+        this.state.chatMessageText ? this.state.chatMessageText : ""
       );
     }
   }
@@ -322,7 +327,7 @@ class App extends Component {
       scopes: config.scopes
     });
 
-    if (teamName === '' || channelName === '') {
+    if (teamName === "" || channelName === "") {
       var gotTeam = await getTeam(accessToken, teamId);
       console.log("gotTeam");
       console.log(gotTeam);
@@ -357,19 +362,21 @@ class App extends Component {
       gotmessages.value[i].replies = r.value;
 
       this.setState({
-        messages: gotmessages.value,
-        selected: {
-          channel: {
-            id: channelId,
-            name: channelName
-          },
-          team: {
-            id: teamId,
-            name: teamName
-          }
-        }
+        messages: gotmessages.value
       });
     }
+    this.setState({
+      selected: {
+        channel: {
+          id: channelId,
+          name: channelName
+        },
+        team: {
+          id: teamId,
+          name: teamName
+        }
+      }
+    });
 
     this.setState({
       isDropdownTreeSelectDisabled: false
@@ -580,13 +587,13 @@ class App extends Component {
                   ようこそ、{this.state.user.displayName} (
                   {this.state.user.email})さん{"   "}
                   <Button variant="contained" onClick={this.signout}>
-                    サインアウト{' '}
+                    サインアウト{" "}
                   </Button>
                 </div>
               );
             }
-          })()}{' '}
-        </div>{' '}
+          })()}{" "}
+        </div>{" "}
         {(() => {
           if (this.state.channels) {
             return (
@@ -604,24 +611,24 @@ class App extends Component {
                     />
                     {this.state.selected
                       ? (this.state.selected.team
-                        ? (this.state.selected.team.name
-                          ? this.state.selected.team.name
-                          : '') +
-                        ' ' +
-                        (this.state.selected.team.id
-                          ? "( " + this.state.selected.team.id + " )"
-                          : '')
-                        : '') +
-                      (this.state.selected.channel
-                        ? (this.state.selected.channel.name
-                          ? " / " + this.state.selected.channel.name
-                          : '') +
-                        ' ' +
-                        (this.state.selected.channel.id
-                          ? "( " + this.state.selected.channel.id + " )"
-                          : '')
-                        : '')
-                      : ''}{' '}
+                          ? (this.state.selected.team.name
+                              ? this.state.selected.team.name
+                              : "") +
+                            " " +
+                            (this.state.selected.team.id
+                              ? "( " + this.state.selected.team.id + " )"
+                              : "")
+                          : "") +
+                        (this.state.selected.channel
+                          ? (this.state.selected.channel.name
+                              ? " / " + this.state.selected.channel.name
+                              : "") +
+                            " " +
+                            (this.state.selected.channel.id
+                              ? "( " + this.state.selected.channel.id + " )"
+                              : "")
+                          : "")
+                      : ""}{" "}
                   </div>
                   <div>
                     <input
@@ -631,7 +638,7 @@ class App extends Component {
                       value={
                         this.state.selected.message
                           ? this.state.selected.message.id
-                          : ''
+                          : ""
                       }
                       onChange={e => {
                         let s = Object.assign({}, this.state);
@@ -656,17 +663,14 @@ class App extends Component {
               </div>
             );
           }
-        })()}{' '}
+        })()}{" "}
         {(() => {
           if (this.state.messages) {
             return (
-              <MessageCardList
-                messages={this.state.messages}
-              >
-              </MessageCardList>
+              <MessageCardList messages={this.state.messages}></MessageCardList>
             );
           }
-        })()}{' '}
+        })()}{" "}
         {(() => {
           if (this.state.messages) {
             return (
@@ -674,7 +678,7 @@ class App extends Component {
                 actions={[
                   {
                     icon: "reply",
-                    tooltip: '',
+                    tooltip: "",
                     onClick: (event, rowData) => {
                       console.log("onClick()", rowData);
                       let s = Object.assign({}, this.state);
@@ -695,22 +699,22 @@ class App extends Component {
               />
             );
           }
-        })()}{' '}
+        })()}{" "}
         {(() => {
           if (this.state.messages) {
             return <JSONTree data={this.state.messages} />;
           }
-        })()}{' '}
+        })()}{" "}
         {(() => {
           if (this.state.channels) {
             return <JSONTree data={this.state.channels} />;
           }
-        })()}{' '}
+        })()}{" "}
         {(() => {
           if (this.state.teams) {
             return <JSONTree data={this.state.teams} />;
           }
-        })()}{' '}
+        })()}{" "}
         <MaterialTable
           title="React-GraphApi-MSTeams"
           columns={this.state.columnsUserTable}
@@ -719,7 +723,7 @@ class App extends Component {
             pageSize: 20,
             sorting: true
           }}
-        />{' '}
+        />{" "}
         <ToastContainer hideProgressBar />
       </div>
     );

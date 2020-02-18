@@ -123,7 +123,7 @@ export async function postMessage(
     "/channels/" +
     channelId +
     "/messages";
-  if (null != messageId) {
+  if (messageId) {
     endpoint += "/" + messageId + "/replies";
   }
   const requestParams = {
