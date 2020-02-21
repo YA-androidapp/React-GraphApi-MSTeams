@@ -57,7 +57,7 @@ class MessageCard extends Component {
         {(() => {
           if (this.props.message.body) {
             const content = this.props.message.body.content;
-            if (this.props.message.body.contentType == "html") {
+            if (this.props.message.body.contentType === "html") {
               return (
                 <div>
                   {this.props.message.body.contentType}{" "}
@@ -76,13 +76,11 @@ class MessageCard extends Component {
         <ul>
           {(() => {
             if (this.props.message.attachments) {
-              {
-                this.props.message.attachments.map(attachment => {
-                  return (
-                    <AttachmentCard attachment={attachment}></AttachmentCard>
-                  );
-                });
-              }
+              this.props.message.attachments.map(attachment => {
+                return (
+                  <AttachmentCard attachment={attachment}></AttachmentCard>
+                );
+              });
             }
           })()}
         </ul>

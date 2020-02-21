@@ -1,4 +1,3 @@
-import { UserAgentApplication } from "msal";
 import config from "./Config";
 import MessageCardList from "./MessageCardList";
 import {
@@ -8,10 +7,10 @@ import {
   getMessagesOfChannel,
   getRepliesOfMessage,
   getTeam,
-  getUserDetails,
   getUsers,
   postMessage
 } from "./GraphService";
+import { setupUserAgentApplication, logout } from "./GraphFunction";
 import { getQueryParams } from "./UrlUtil";
 
 // yarn add @material-ui/core
@@ -26,9 +25,7 @@ import DropdownTreeSelect from "react-dropdown-tree-select";
 import "react-dropdown-tree-select/dist/styles.css";
 
 // yarn add material-table
-import Icon from "@material-ui/core/Icon";
 import React, { Component } from "react";
-import ReactDOM from "react-dom";
 import MaterialTable from "material-table";
 
 // yarn add react-toastify
@@ -42,26 +39,6 @@ class App extends Component {
 
     if (config.isDebug) {
       console.log("isDebug");
-    }
-
-    this.userAgentApplication = new UserAgentApplication({
-      auth: {
-        clientId: config.appId
-      },
-      cache: {
-        cacheLocation: "localStorage",
-        storeAuthStateInCookie: true
-      }
-    });
-    if (config.isDebug) {
-      console.log("this.userAgentApplication");
-      console.log(this.userAgentApplication);
-    }
-
-    var user = this.userAgentApplication.getAccount();
-    if (config.isDebug) {
-      console.log("user");
-      console.log(user);
     }
 
     this.state = {
@@ -107,7 +84,7 @@ class App extends Component {
           field: "mobilePhone"
         }
       ],
-      isAuthenticated: user !== null,
+      isAuthenticated: false,
       isDropdownTreeSelectDisabled: false,
       messages: [],
       selected: {
@@ -132,27 +109,33 @@ class App extends Component {
       console.log(this.state);
     }
 
-    if (user) {
-      // Enhance user object with data from Graph
-      console.log("if (user)");
-      this.getUserProfile();
-    } else {
-      console.log("if (!user)");
-      this.login();
-    }
-
+    this.ReadGraphData = this.ReadGraphData.bind(this);
     this.ReadGraphMessagesData = this.ReadGraphMessagesData.bind(this);
     this.ReadGraphTeamsData = this.ReadGraphTeamsData.bind(this);
-    this.signout = this.signout.bind(this);
     this.Notify = this.Notify.bind(this);
     this.onTreeChange = this.onTreeChange.bind(this);
     this.onTreeAction = this.onTreeAction.bind(this);
     this.onTreeNodeToggle = this.onTreeNodeToggle.bind(this);
     this.postChatMessage = this.postChatMessage.bind(this);
+
+    try {
+      let userAgentApplication = setupUserAgentApplication(this);
+      this.ReadGraphData(userAgentApplication);
+    } catch (err) {
+      if (config.isDebug) {
+        console.log("ReadGraphTeamsData() err");
+        console.log(err);
+      }
+
+      this.Notify(
+        "error",
+        `エラーが発生しました: ${err.message} : ${err.fileName} : ${err.lineNumber}`
+      );
+    }
   }
 
-  async componentDidMount() {
-    const params = getQueryParams(window.location.search);
+  async ReadGraphData() {
+    const params = await getQueryParams(window.location.search);
 
     // forceパラメータがある場合は強制的にサーバから情報取得
     if (params["force"]) {
@@ -263,10 +246,6 @@ class App extends Component {
       );
     }
   }
-
-  signout = () => {
-    this.userAgentApplication.logout();
-  };
 
   Notify = (type, message) => {
     if (config.isDebug) {
@@ -388,188 +367,109 @@ class App extends Component {
       console.log("ReadGraphTeamsData(" + String(force) + ")");
     }
 
-    try {
-      // Get the user's access token
-      var accessToken = await window.msal.acquireTokenSilent({
-        scopes: config.scopes
+    // Get the user's access token
+    var accessToken = await window.msal.acquireTokenSilent({
+      scopes: config.scopes
+    });
+
+    // Get users
+    if (force || !this.state.users || 0 === this.state.users.length) {
+      var gotusers = await getUsers(accessToken);
+      if (config.isDebug) {
+        console.log("gotusers");
+        console.log(gotusers);
+      }
+
+      // Update the array of users in state
+      this.setState({
+        users: gotusers.value
       });
 
-      // Get users
-      if (force || !this.state.users || 0 === this.state.users.length) {
-        var gotusers = await getUsers(accessToken);
-        if (config.isDebug) {
-          console.log("gotusers");
-          console.log(gotusers);
-        }
+      this.Notify("success", "[Graph API]ユーザー読込みが完了しました。");
+    }
+    if (config.isDebug) {
+      console.log("this.state.users");
+      console.log(this.state.users);
+    }
 
-        // Update the array of users in state
-        this.setState({
-          users: gotusers.value
-        });
-
-        this.Notify("success", "[Graph API]ユーザー読込みが完了しました。");
-      }
+    if (force || !this.state.teams || 0 === this.state.teams.length) {
+      var gotTeams = await getJoinedTeams(accessToken);
       if (config.isDebug) {
-        console.log("this.state.users");
-        console.log(this.state.users);
+        console.log("gotTeams.value");
+        console.log(gotTeams.value);
       }
+      this.setState({
+        teams: gotTeams.value
+      });
 
-      if (force || !this.state.teams || 0 === this.state.teams.length) {
-        var gotTeams = await getJoinedTeams(accessToken);
-        if (config.isDebug) {
-          console.log("gotTeams.value");
-          console.log(gotTeams.value);
-        }
-        this.setState({
-          teams: gotTeams.value
-        });
+      this.Notify("success", "[Graph API]チーム読込みが完了しました。");
+    }
+    if (config.isDebug) {
+      console.log("this.state.teams");
+      console.log(this.state.teams);
+    }
 
-        this.Notify("success", "[Graph API]チーム読込みが完了しました。");
-      }
-      if (config.isDebug) {
-        console.log("this.state.teams");
-        console.log(this.state.teams);
-      }
-
-      if (force || !this.state.channels || 0 === this.state.channels.length) {
-        const channels = {
-          label: "Channels",
-          value: "Channels",
-          children: []
-        };
-        for (let i = 0, len = this.state.teams.length; i < len; ++i) {
-          var team = this.state.teams[i]; // {};
-          if (config.isDebug) {
-            console.log("i: " + String(i) + " team:" + this.state.teams[i].id);
-          }
-          team.desc = this.state.teams[i].description;
-          team.label = this.state.teams[i].displayName;
-          team.value = this.state.teams[i].id;
-          team.children = [];
-          var gotChannels = await getChannelsOfTeam(
-            accessToken,
-            this.state.teams[i].id
-          );
-          for (let j = 0, len = gotChannels.value.length; j < len; ++j) {
-            const l =
-              this.state.teams[i].displayName +
-              "/" +
-              gotChannels.value[j].displayName;
-            const v = this.state.teams[i].id + "/" + gotChannels.value[j].id;
-            var channel = gotChannels.value[j]; // {};
-            channel.desc = this.state.teams[i].description;
-            channel.label = l;
-            channel.value = v;
-            team.children.push(channel);
-          }
-          channels.children.push(team);
-          this.setState({
-            channels: channels
-          });
-        }
-      }
-      if (config.isDebug) {
-        console.log("this.state.channels");
-        console.log(this.state.channels);
-      }
-
-      if (config.isDebug) {
-        console.log("localStorage.setItem");
-        console.log("JSON.stringify(this.state)");
-        console.log(JSON.stringify(this.state));
-        console.log("JSON.stringify(valuesToSave)");
-      }
-      const valuesToSave = {
-        channels: this.state.channels,
-        teams: this.state.teams,
-        users: this.state.users
+    if (force || !this.state.channels || 0 === this.state.channels.length) {
+      const channels = {
+        label: "Channels",
+        value: "Channels",
+        children: []
       };
-      // localStorage.setItem("state", JSON.stringify(this.state));
-      localStorage.setItem("state", JSON.stringify(valuesToSave));
-
-      if (config.isDebug) {
-        console.log(JSON.stringify(valuesToSave));
-      }
-
-      this.Notify("success", "[Graph API]チャネル読込みが完了しました。");
-    } catch (err) {
-      this.Notify(
-        "error",
-        `エラーが発生しました: ${err.message} : ${err.fileName} : ${err.lineNumber}`
-      );
-    }
-  }
-
-  async login() {
-    if (config.isDebug) {
-      console.log("login()");
-    }
-
-    try {
-      await this.userAgentApplication.loginPopup({
-        scopes: config.scopes,
-        prompt: "select_account"
-      });
-      await this.getUserProfile();
-    } catch (err) {
-      this.setState({
-        isAuthenticated: false,
-        user: {}
-      });
-      this.Notify(
-        "error",
-        `エラーが発生しました: ${err.message} : ${err.fileName} : ${err.lineNumber}`
-      );
-    }
-  }
-
-  async logout() {
-    if (config.isDebug) {
-      console.log("logout()");
-    }
-
-    await this.userAgentApplication.logout();
-  }
-
-  async getUserProfile() {
-    if (config.isDebug) {
-      console.log("getUserProfile()");
-    }
-
-    try {
-      // Get the access token silently
-      // If the cache contains a non-expired token, this function
-      // will just return the cached token. Otherwise, it will
-      // make a request to the Azure OAuth endpoint to get a token
-
-      var accessToken = await this.userAgentApplication.acquireTokenSilent({
-        scopes: config.scopes
-      });
-
-      if (accessToken) {
-        // Get the user's profile from Graph
-        var usr = await getUserDetails(accessToken);
-        console.log("usr");
-        console.log(usr);
+      for (let i = 0, len = this.state.teams.length; i < len; ++i) {
+        var team = this.state.teams[i]; // {};
+        if (config.isDebug) {
+          console.log("i: " + String(i) + " team:" + this.state.teams[i].id);
+        }
+        team.desc = this.state.teams[i].description;
+        team.label = this.state.teams[i].displayName;
+        team.value = this.state.teams[i].id;
+        team.children = [];
+        var gotChannels = await getChannelsOfTeam(
+          accessToken,
+          this.state.teams[i].id
+        );
+        for (let j = 0, len = gotChannels.value.length; j < len; ++j) {
+          const l =
+            this.state.teams[i].displayName +
+            "/" +
+            gotChannels.value[j].displayName;
+          const v = this.state.teams[i].id + "/" + gotChannels.value[j].id;
+          var channel = gotChannels.value[j]; // {};
+          channel.desc = this.state.teams[i].description;
+          channel.label = l;
+          channel.value = v;
+          team.children.push(channel);
+        }
+        channels.children.push(team);
         this.setState({
-          isAuthenticated: true,
-          user: {
-            displayName: usr.displayName,
-            email: usr.mail || usr.userPrincipalName
-          }
+          channels: channels
         });
-        console.log("setState");
       }
-    } catch (err) {
-      this.setState({
-        isAuthenticated: false,
-        user: null
-      });
-      this.Notify(
-        "error",
-        `エラーが発生しました: ${err.message} : ${err.fileName} : ${err.lineNumber}`
-      );
     }
+    if (config.isDebug) {
+      console.log("this.state.channels");
+      console.log(this.state.channels);
+    }
+
+    if (config.isDebug) {
+      console.log("localStorage.setItem");
+      console.log("JSON.stringify(this.state)");
+      console.log(JSON.stringify(this.state));
+      console.log("JSON.stringify(valuesToSave)");
+    }
+    const valuesToSave = {
+      channels: this.state.channels,
+      teams: this.state.teams,
+      users: this.state.users
+    };
+    // localStorage.setItem("state", JSON.stringify(this.state));
+    localStorage.setItem("state", JSON.stringify(valuesToSave));
+
+    if (config.isDebug) {
+      console.log(JSON.stringify(valuesToSave));
+    }
+
+    this.Notify("success", "[Graph API]チャネル読込みが完了しました。");
   }
 
   render() {
@@ -586,7 +486,7 @@ class App extends Component {
                 <div>
                   ようこそ、{this.state.user.displayName} (
                   {this.state.user.email})さん{"   "}
-                  <Button variant="contained" onClick={this.signout}>
+                  <Button variant="contained" onClick={logout}>
                     サインアウト{" "}
                   </Button>
                 </div>
